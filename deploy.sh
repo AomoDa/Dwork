@@ -37,7 +37,7 @@ npm run build
 
 # 5. 构建后端 (如果需要编译 TS)
 echo "正在构建后端..."
-npx esbuild server.ts --bundle --platform=node --target=node18 --outfile=dist/server.cjs
+npx esbuild server.ts --bundle --platform=node --target=node18 --packages=external --outfile=dist/server.cjs
 
 # 6. 启动服务 (使用 PM2 保证后台运行)
 if ! command -v pm2 &> /dev/null
@@ -47,9 +47,11 @@ then
 fi
 
 echo "正在启动服务..."
-pm2 start dist/server.cjs --name "dwork"
+# 确保以生产模式启动，避免加载开发依赖
+export NODE_ENV=production
+pm2 start dist/server.cjs --name "dwork" --update-env
 
 echo "部署完成！"
-echo "服务已在后台运行，可以通过 http://localhost:3000 访问。"
-echo "管理员面板访问地址: http://localhost:3000/admin?token=abcd"
+echo "服务已在后台运行，可以通过 http://<你的服务器IP>:3000 访问。"
+echo "管理员面板访问地址: http://<你的服务器IP>:3000/admin?token=abcd"
 echo "如果需要停止服务，请运行: pm2 stop dwork"
