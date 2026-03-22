@@ -3,29 +3,82 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { createClient } from '@libsql/client';
 
 const PORT = 3000;
-const DATA_FILE = path.join(process.cwd(), 'data.json');
+const DB_FILE = 'file:local.db';
 
-// Ensure data file exists
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify({
-    adminToken: 'abcd',
-    members: [
-      { id: '1', name: '张明辉', email: 'minghui.zhang@lead-team.com', path: 'a1b2c3' },
-      { id: '2', name: '李青', email: 'qing.li@lead-team.com', path: 'd4e5f6' },
-      { id: '3', name: '王志平', email: 'zhiping.wang@lead-team.com', path: 'g7h8i9' }
-    ],
-    schedules: []
-  }, null, 2));
+const db = createClient({
+  url: DB_FILE,
+});
+
+async function initDb() {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS members (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL UNIQUE
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS schedules (
+      id TEXT PRIMARY KEY,
+      memberId TEXT NOT NULL,
+      date TEXT NOT NULL,
+      timeOfDay TEXT NOT NULL,
+      content TEXT NOT NULL,
+      type TEXT NOT NULL,
+      image TEXT,
+      FOREIGN KEY(memberId) REFERENCES members(id)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+
+  // Initialize admin token
+  const tokenRes = await db.execute({
+    sql: 'SELECT value FROM config WHERE key = ?',
+    args: ['adminToken']
+  });
+
+  if (tokenRes.rows.length === 0) {
+    await db.execute({
+      sql: 'INSERT INTO config (key, value) VALUES (?, ?)',
+      args: ['adminToken', 'abcd']
+    });
+  }
+
+  // Initialize members if empty
+  const membersRes = await db.execute('SELECT count(*) as count FROM members');
+  if (membersRes.rows[0].count === 0) {
+    const initialMembers = [
+      '姜银凤', '楼丽', '蒋青海', '姚晓晓', '赵威威', '王莉', '陈建康',
+      '毛春楼', '谢忠帐', '方明', '姚义蒙', '董益斌', '封令伟', '宋斌'
+    ];
+
+    for (const name of initialMembers) {
+      const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+      const memberPath = Math.random().toString(36).substring(2, 8);
+      await db.execute({
+        sql: 'INSERT INTO members (id, name, path) VALUES (?, ?, ?)',
+        args: [id, name, memberPath]
+      });
+    }
+  }
 }
 
-function readData() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-}
-
-function writeData(data: any) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+async function getAdminToken() {
+  const res = await db.execute({
+    sql: 'SELECT value FROM config WHERE key = ?',
+    args: ['adminToken']
+  });
+  return res.rows[0]?.value as string;
 }
 
 function generatePath() {
@@ -33,62 +86,79 @@ function generatePath() {
 }
 
 async function startServer() {
+  await initDb();
+
   const app = express();
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // API Routes
-  app.get('/api/admin/members', (req, res) => {
-    const data = readData();
-    if (req.query.token !== data.adminToken) {
+  app.get('/api/admin/members', async (req, res) => {
+    const token = await getAdminToken();
+    if (req.query.token !== token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    res.json(data.members);
+    const result = await db.execute('SELECT * FROM members');
+    res.json(result.rows);
   });
 
-  app.get('/api/admin/schedules', (req, res) => {
-    const data = readData();
-    if (req.query.token !== data.adminToken) {
+  app.get('/api/admin/schedules', async (req, res) => {
+    const token = await getAdminToken();
+    if (req.query.token !== token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    res.json(data.schedules);
+    const result = await db.execute('SELECT * FROM schedules');
+    res.json(result.rows);
   });
 
-  app.post('/api/admin/members', (req, res) => {
-    const data = readData();
-    if (req.query.token !== data.adminToken) {
+  app.post('/api/admin/members', async (req, res) => {
+    const token = await getAdminToken();
+    if (req.query.token !== token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const newMember = {
       id: Date.now().toString(),
       name: req.body.name,
-      email: req.body.email,
       path: generatePath()
     };
-    data.members.push(newMember);
-    writeData(data);
+    await db.execute({
+      sql: 'INSERT INTO members (id, name, path) VALUES (?, ?, ?)',
+      args: [newMember.id, newMember.name, newMember.path]
+    });
     res.json(newMember);
   });
 
-  app.get('/api/member/:path', (req, res) => {
-    const data = readData();
-    const member = data.members.find((m: any) => m.path === req.params.path);
+  app.get('/api/member/:path', async (req, res) => {
+    const result = await db.execute({
+      sql: 'SELECT * FROM members WHERE path = ?',
+      args: [req.params.path]
+    });
+    const member = result.rows[0];
     if (!member) return res.status(404).json({ error: 'Member not found' });
     res.json(member);
   });
 
-  app.get('/api/member/:path/schedules', (req, res) => {
-    const data = readData();
-    const member = data.members.find((m: any) => m.path === req.params.path);
+  app.get('/api/member/:path/schedules', async (req, res) => {
+    const memberRes = await db.execute({
+      sql: 'SELECT id FROM members WHERE path = ?',
+      args: [req.params.path]
+    });
+    const member = memberRes.rows[0];
     if (!member) return res.status(404).json({ error: 'Member not found' });
     
-    const schedules = data.schedules.filter((s: any) => s.memberId === member.id);
-    res.json(schedules);
+    const schedulesRes = await db.execute({
+      sql: 'SELECT * FROM schedules WHERE memberId = ?',
+      args: [member.id]
+    });
+    res.json(schedulesRes.rows);
   });
 
-  app.post('/api/member/:path/schedules', (req, res) => {
-    const data = readData();
-    const member = data.members.find((m: any) => m.path === req.params.path);
+  app.post('/api/member/:path/schedules', async (req, res) => {
+    const memberRes = await db.execute({
+      sql: 'SELECT id FROM members WHERE path = ?',
+      args: [req.params.path]
+    });
+    const member = memberRes.rows[0];
     if (!member) return res.status(404).json({ error: 'Member not found' });
 
     const newSchedule = {
@@ -100,18 +170,27 @@ async function startServer() {
       type: req.body.type || 'core',
       image: req.body.image || null
     };
-    data.schedules.push(newSchedule);
-    writeData(data);
+
+    await db.execute({
+      sql: 'INSERT INTO schedules (id, memberId, date, timeOfDay, content, type, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [newSchedule.id, newSchedule.memberId, newSchedule.date, newSchedule.timeOfDay, newSchedule.content, newSchedule.type, newSchedule.image]
+    });
+
     res.json(newSchedule);
   });
 
-  app.delete('/api/member/:path/schedules/:id', (req, res) => {
-    const data = readData();
-    const member = data.members.find((m: any) => m.path === req.params.path);
+  app.delete('/api/member/:path/schedules/:id', async (req, res) => {
+    const memberRes = await db.execute({
+      sql: 'SELECT id FROM members WHERE path = ?',
+      args: [req.params.path]
+    });
+    const member = memberRes.rows[0];
     if (!member) return res.status(404).json({ error: 'Member not found' });
 
-    data.schedules = data.schedules.filter((s: any) => s.id !== req.params.id || s.memberId !== member.id);
-    writeData(data);
+    await db.execute({
+      sql: 'DELETE FROM schedules WHERE id = ? AND memberId = ?',
+      args: [req.params.id, member.id]
+    });
     res.json({ success: true });
   });
 

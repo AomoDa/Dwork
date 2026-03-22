@@ -14,9 +14,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/admin/members" replace />} />
+        <Route path="/" element={<Navigate to="/admin/weekly" replace />} />
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="members" replace />} />
+          <Route index element={<Navigate to="weekly" replace />} />
           <Route path="members" element={<AdminMembers />} />
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="weekly" element={<AdminWeeklyCalendar />} />

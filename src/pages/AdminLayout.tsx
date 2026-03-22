@@ -25,17 +25,17 @@ export default function AdminLayout() {
         </div>
         <nav className="flex-1">
           <div className="mb-4 px-6 text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em]">主要功能</div>
-          <Link to={`/admin/members?token=${token}`} className={`py-4 px-6 flex items-center gap-3 transition-all ${location.pathname.includes('members') ? 'bg-blue-600/10 text-blue-400 border-r-4 border-blue-500' : 'text-slate-400 hover:bg-white/5'}`}>
-            <Users className="w-5 h-5" />
-            <span className="text-sm tracking-wide uppercase font-medium">成员管理</span>
+          <Link to={`/admin/weekly?token=${token}`} className={`py-4 px-6 flex items-center gap-3 transition-all ${location.pathname.includes('weekly') ? 'bg-blue-600/10 text-blue-400 border-r-4 border-blue-500' : 'text-slate-400 hover:bg-white/5'}`}>
+            <CalendarDays className="w-5 h-5" />
+            <span className="text-sm tracking-wide uppercase font-medium">周历日程</span>
           </Link>
           <Link to={`/admin/calendar?token=${token}`} className={`py-4 px-6 flex items-center gap-3 transition-all ${location.pathname.includes('calendar') ? 'bg-blue-600/10 text-blue-400 border-r-4 border-blue-500' : 'text-slate-400 hover:bg-white/5'}`}>
             <Calendar className="w-5 h-5" />
             <span className="text-sm tracking-wide uppercase font-medium">月历日程</span>
           </Link>
-          <Link to={`/admin/weekly?token=${token}`} className={`py-4 px-6 flex items-center gap-3 transition-all ${location.pathname.includes('weekly') ? 'bg-blue-600/10 text-blue-400 border-r-4 border-blue-500' : 'text-slate-400 hover:bg-white/5'}`}>
-            <CalendarDays className="w-5 h-5" />
-            <span className="text-sm tracking-wide uppercase font-medium">周历日程</span>
+          <Link to={`/admin/members?token=${token}`} className={`py-4 px-6 flex items-center gap-3 transition-all ${location.pathname.includes('members') ? 'bg-blue-600/10 text-blue-400 border-r-4 border-blue-500' : 'text-slate-400 hover:bg-white/5'}`}>
+            <Users className="w-5 h-5" />
+            <span className="text-sm tracking-wide uppercase font-medium">成员管理</span>
           </Link>
         </nav>
         <div className="mt-auto px-6 border-t border-white/10 pt-6">

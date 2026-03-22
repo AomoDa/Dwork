@@ -6,7 +6,6 @@ import { Calendar as CalendarIcon, LogOut, Image as ImageIcon, Trash2, X, Info, 
 interface Member {
   id: string;
   name: string;
-  email: string;
   path: string;
 }
 

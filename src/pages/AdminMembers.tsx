@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { UserPlus, Link as LinkIcon, Copy } from 'lucide-react';
+import { UserPlus, Link as LinkIcon, Copy, QrCode, X } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Member {
   id: string;
   name: string;
-  email: string;
   path: string;
 }
 
@@ -15,8 +15,9 @@ export default function AdminMembers() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newMember, setNewMember] = useState({ name: '', email: '' });
+  const [newMember, setNewMember] = useState({ name: '' });
   const [toastMessage, setToastMessage] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -51,7 +52,7 @@ export default function AdminMembers() {
       const added = await res.json();
       setMembers([...members, added]);
       setShowAddModal(false);
-      setNewMember({ name: '', email: '' });
+      setNewMember({ name: '' });
       showToast('添加成功');
     } catch (err: any) {
       showToast(err.message);
@@ -62,6 +63,11 @@ export default function AdminMembers() {
     const url = `${window.location.origin}/m/${path}`;
     navigator.clipboard.writeText(url);
     showToast('链接已复制到剪贴板！');
+  };
+
+  const showQrCode = (path: string) => {
+    const url = `${window.location.origin}/m/${path}`;
+    setQrCodeUrl(url);
   };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -96,22 +102,20 @@ export default function AdminMembers() {
                 </div>
                 <div>
                   <h3 className="font-bold text-on-surface">{member.name}</h3>
-                  <p className="text-xs text-on-surface-variant">{member.email}</p>
                 </div>
               </div>
               <div className="col-span-4 flex justify-end gap-2">
                 <button 
-                  onClick={() => copyUrl(member.path)}
+                  onClick={() => showQrCode(member.path)}
                   className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
                 >
-                  <LinkIcon className="w-4 h-4" /> 生成 URL
+                  <QrCode className="w-4 h-4" /> 二维码
                 </button>
                 <button 
                   onClick={() => copyUrl(member.path)}
-                  className="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors"
-                  title="复制链接"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
                 >
-                  <Copy className="w-4 h-4" />
+                  <LinkIcon className="w-4 h-4" /> 复制 URL
                 </button>
               </div>
             </div>
@@ -137,17 +141,7 @@ export default function AdminMembers() {
                   type="text" 
                   required
                   value={newMember.name}
-                  onChange={e => setNewMember({...newMember, name: e.target.value})}
-                  className="w-full bg-surface-container-highest border-none rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/40 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">邮箱</label>
-                <input 
-                  type="email" 
-                  required
-                  value={newMember.email}
-                  onChange={e => setNewMember({...newMember, email: e.target.value})}
+                  onChange={e => setNewMember({ name: e.target.value })}
                   className="w-full bg-surface-container-highest border-none rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/40 outline-none"
                 />
               </div>
@@ -167,6 +161,24 @@ export default function AdminMembers() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {qrCodeUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-on-surface/30 backdrop-blur-sm" onClick={() => setQrCodeUrl(null)}>
+          <div className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-surface-container-high p-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-on-surface">成员专属二维码</h3>
+              <button onClick={() => setQrCodeUrl(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+                <X className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="flex justify-center bg-white p-4 rounded-xl mb-4">
+              <QRCodeSVG value={qrCodeUrl} size={200} />
+            </div>
+            <p className="text-xs text-on-surface-variant break-all">{qrCodeUrl}</p>
           </div>
         </div>
       )}
