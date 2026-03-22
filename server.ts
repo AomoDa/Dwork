@@ -53,22 +53,35 @@ async function initDb() {
     });
   }
 
-  // Initialize members if empty
-  const membersRes = await db.execute('SELECT count(*) as count FROM members');
-  if (membersRes.rows[0].count === 0) {
-    const initialMembers = [
-      '姜银凤', '楼丽', '蒋青海', '姚晓晓', '赵威威', '王莉', '陈建康',
-      '毛春楼', '谢忠帐', '方明', '姚义蒙', '董益斌', '封令伟', '宋斌'
-    ];
+  // Initialize members if not already initialized
+  const initRes = await db.execute({
+    sql: 'SELECT value FROM config WHERE key = ?',
+    args: ['isInitialized']
+  });
 
-    for (const name of initialMembers) {
-      const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
-      const memberPath = Math.random().toString(36).substring(2, 8);
-      await db.execute({
-        sql: 'INSERT INTO members (id, name, path) VALUES (?, ?, ?)',
-        args: [id, name, memberPath]
-      });
+  if (initRes.rows.length === 0) {
+    const membersRes = await db.execute('SELECT count(*) as count FROM members');
+    if (membersRes.rows[0].count === 0) {
+      const initialMembers = [
+        '姜银凤', '楼丽', '蒋青海', '姚晓晓', '赵威威', '王莉', '陈建康',
+        '毛春楼', '谢忠帐', '方明', '姚义蒙', '董益斌', '封令伟', '宋斌'
+      ];
+
+      for (const name of initialMembers) {
+        const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+        const memberPath = Math.random().toString(36).substring(2, 8);
+        await db.execute({
+          sql: 'INSERT INTO members (id, name, path) VALUES (?, ?, ?)',
+          args: [id, name, memberPath]
+        });
+      }
     }
+
+    // Mark database as initialized
+    await db.execute({
+      sql: 'INSERT INTO config (key, value) VALUES (?, ?)',
+      args: ['isInitialized', 'true']
+    });
   }
 }
 
