@@ -30,6 +30,16 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
+## 🧹 数据维护
+
+### 清空所有日程
+如果需要清空数据库中所有成员的日程记录（例如新的一年/月重新开始），可以在服务器的项目目录下运行以下命令：
+
+```bash
+npm run clear:schedules
+```
+*注：这是一个高危操作，运行后终端会弹出警告，并要求输入 `yes` 进行二次确认，防止误删数据。*
+
 ## 🛠️ 技术栈
 
 - **前端**：React 18, React Router, Tailwind CSS, Lucide Icons, Vite

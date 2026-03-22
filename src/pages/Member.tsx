@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
-import { Calendar as CalendarIcon, LogOut, Image as ImageIcon, Trash2, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
+import { Calendar as CalendarIcon, LogOut, Image as ImageIcon, Trash2, X, Info, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -35,6 +36,20 @@ export default function Member() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
 
+  // Get current date in Shanghai timezone
+  const getShanghaiToday = () => {
+    const now = new Date();
+    const shanghaiDateStr = formatInTimeZone(now, 'Asia/Shanghai', 'yyyy-MM-dd');
+    return new Date(shanghaiDateStr);
+  };
+
+  const isDateEditable = (date: Date) => {
+    const shanghaiToday = getShanghaiToday();
+    const targetDate = startOfDay(date);
+    // Editable if targetDate is before or equal to today
+    return !isAfter(targetDate, shanghaiToday);
+  };
+
   useEffect(() => {
     fetch(`/api/member/${path}`)
       .then(res => {
@@ -66,6 +81,9 @@ export default function Member() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
   const openModal = (date: Date) => {
+    if (!isDateEditable(date)) {
+      return; // Do nothing if date is not editable
+    }
     setSelectedDate(date);
     setContent('');
     setTimeOfDay('AM');
@@ -83,6 +101,10 @@ export default function Member() {
   };
 
   const handleSave = async () => {
+    if (!isDateEditable(selectedDate)) {
+      setFormError('未到的日期不可编辑');
+      return;
+    }
     if (!content.trim()) {
       setFormError('请输入事项详情');
       return;
@@ -111,8 +133,15 @@ export default function Member() {
     }
   };
 
-  const handleDelete = (id: string, e?: React.MouseEvent) => {
+  const handleDelete = (id: string, scheduleDateStr: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    
+    // Check if the schedule's date is editable
+    const scheduleDate = new Date(scheduleDateStr);
+    if (!isDateEditable(scheduleDate)) {
+      return;
+    }
+    
     setDeleteConfirmId(id);
   };
 
@@ -140,6 +169,7 @@ export default function Member() {
   const uniqueDays = new Set(currentMonthSchedules.map(s => s.date)).size;
 
   const todaysSchedules = schedules.filter(s => s.date === format(selectedDate, 'yyyy-MM-dd')).sort((a, b) => a.timeOfDay === 'AM' ? -1 : 1);
+  const isSelectedDateEditable = isDateEditable(selectedDate);
 
   return (
     <div className="bg-surface min-h-screen flex flex-col font-sans text-on-surface">
@@ -204,13 +234,15 @@ export default function Member() {
                 <div className="flex bg-surface-container-highest p-1 rounded-lg">
                   <button 
                     onClick={() => setTimeOfDay('AM')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${timeOfDay === 'AM' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'}`}
+                    disabled={!isSelectedDateEditable}
+                    className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${timeOfDay === 'AM' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'} ${!isSelectedDateEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     上午
                   </button>
                   <button 
                     onClick={() => setTimeOfDay('PM')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${timeOfDay === 'PM' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'}`}
+                    disabled={!isSelectedDateEditable}
+                    className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${timeOfDay === 'PM' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'} ${!isSelectedDateEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     下午
                   </button>
@@ -224,8 +256,9 @@ export default function Member() {
               <textarea 
                 value={content}
                 onChange={e => setContent(e.target.value)}
-                className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-outline outline-none resize-none" 
-                placeholder="请输入具体的工作内容或会议安排..." 
+                disabled={!isSelectedDateEditable}
+                className={`w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-outline outline-none resize-none ${!isSelectedDateEditable ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                placeholder={isSelectedDateEditable ? "请输入具体的工作内容或会议安排..." : "未到的日期不可编辑"} 
                 rows={4}
               />
             </div>
@@ -234,17 +267,19 @@ export default function Member() {
             <div className="space-y-2">
               <label className="text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">附件图片</label>
               <div className="flex gap-3">
-                <label className="w-20 h-20 rounded-lg bg-surface-container-highest border-2 border-dashed border-outline-variant/30 flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <label className={`w-20 h-20 rounded-lg bg-surface-container-highest border-2 border-dashed border-outline-variant/30 flex flex-col items-center justify-center transition-colors ${isSelectedDateEditable ? 'cursor-pointer hover:bg-surface-container-high' : 'opacity-50 cursor-not-allowed'}`}>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={!isSelectedDateEditable} />
                   <ImageIcon className="w-6 h-6 text-on-surface-variant mb-1" />
                   <span className="text-[10px] text-on-surface-variant">添加图片</span>
                 </label>
                 {image && (
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden group">
                     <img src={image} className="w-full h-full object-cover" />
-                    <button onClick={(e) => { e.preventDefault(); setImage(null); }} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
+                    {isSelectedDateEditable && (
+                      <button onClick={(e) => { e.preventDefault(); setImage(null); }} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -259,9 +294,11 @@ export default function Member() {
               )}
               <button 
                 onClick={handleSave}
-                className="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-xl shadow-lg active:scale-95 duration-200 transition-all"
+                disabled={!isSelectedDateEditable}
+                className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all ${isSelectedDateEditable ? 'bg-gradient-to-br from-primary to-primary-container text-on-primary active:scale-95 duration-200' : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed flex items-center justify-center gap-2'}`}
               >
-                保存事项
+                {!isSelectedDateEditable && <Lock className="w-4 h-4" />}
+                {isSelectedDateEditable ? '保存事项' : '未到的日期不可编辑'}
               </button>
             </div>
           </div>
