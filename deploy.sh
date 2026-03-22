@@ -49,9 +49,17 @@ fi
 echo "正在启动服务..."
 # 确保以生产模式启动，避免加载开发依赖
 export NODE_ENV=production
-pm2 start dist/server.cjs --name "dwork" --update-env
 
-echo "部署完成！"
+# 检查 PM2 中是否已经存在名为 dwork 的进程
+if pm2 describe dwork > /dev/null 2>&1; then
+    echo "检测到已有 dwork 进程，正在重启..."
+    pm2 restart dwork --update-env
+else
+    echo "正在启动新进程..."
+    pm2 start dist/server.cjs --name "dwork" --update-env
+fi
+
+echo "部署/更新完成！"
 echo "服务已在后台运行，可以通过 http://<你的服务器IP>:3000 访问。"
 echo "管理员面板访问地址: http://<你的服务器IP>:3000/admin?token=abcd"
 echo "如果需要停止服务，请运行: pm2 stop dwork"

@@ -35,6 +35,12 @@ export default function Member() {
   const [image, setImage] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   // Get current date in Shanghai timezone
   const getShanghaiToday = () => {
@@ -82,6 +88,7 @@ export default function Member() {
 
   const openModal = (date: Date) => {
     if (!isDateEditable(date)) {
+      showToast('时间未到，不可提报');
       return; // Do nothing if date is not editable
     }
     setSelectedDate(date);
@@ -225,6 +232,13 @@ export default function Member() {
                     type="date" 
                     value={format(selectedDate, 'yyyy-MM-dd')}
                     onChange={e => setSelectedDate(new Date(e.target.value))}
+                    onClick={(e) => {
+                      try {
+                        if ('showPicker' in HTMLInputElement.prototype) {
+                          e.currentTarget.showPicker();
+                        }
+                      } catch (err) {}
+                    }}
                     className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none"
                   />
                 </div>
@@ -528,6 +542,14 @@ export default function Member() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <Info className="w-5 h-5 text-primary-container" />
+          <span className="font-medium text-sm">{toastMessage}</span>
         </div>
       )}
     </div>

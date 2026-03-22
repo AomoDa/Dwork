@@ -84,6 +84,17 @@ export default function AdminMembers() {
             <UserPlus className="w-4 h-4" />
             添加新成员
           </button>
+          <button 
+            onClick={() => {
+              const url = `${window.location.origin}/directory?token=${token}`;
+              navigator.clipboard.writeText(url);
+              showToast('集合页链接已复制到剪贴板！');
+            }}
+            className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            <LinkIcon className="w-4 h-4" />
+            复制集合页链接
+          </button>
         </div>
       </div>
 

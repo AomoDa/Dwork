@@ -9,6 +9,7 @@ import AdminMembers from './pages/AdminMembers';
 import AdminCalendar from './pages/AdminCalendar';
 import AdminWeeklyCalendar from './pages/AdminWeeklyCalendar';
 import Member from './pages/Member';
+import MemberDirectory from './pages/MemberDirectory';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="weekly" element={<AdminWeeklyCalendar />} />
         </Route>
         <Route path="/m/:path" element={<Member />} />
+        <Route path="/directory" element={<MemberDirectory />} />
       </Routes>
     </BrowserRouter>
   );
