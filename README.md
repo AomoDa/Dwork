@@ -1,20 +1,41 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Dwork - 团队日程管理系统
 
-# Run and deploy your AI Studio app
+Dwork 是一个专为团队设计的轻量级日程管理系统，支持管理员统筹安排与成员移动端便捷查看。
 
-This contains everything you need to run your app locally.
+## ✨ 核心功能
 
-View your app in AI Studio: https://ai.studio/apps/7354dca2-bb1b-4609-9f20-8b65ed0ab862
+### 👨‍💼 管理员控制台
+- **周历日程**：以周为维度，直观展示和管理所有成员的日程安排。
+- **月历日程**：以月为维度，宏观把控团队整体的排班与计划。
+- **成员管理**：
+  - 快速添加团队成员（仅需姓名）。
+  - 为每位成员生成专属的移动端访问链接。
+  - **二维码生成**：一键生成成员专属二维码，成员扫码即可免密登录查看个人日程。
 
-## Run Locally
+### 📱 成员移动端
+- **专属视图**：成员通过专属链接或二维码进入，仅查看自己的日程，保护隐私。
+- **日程查看**：清晰展示每日的日程安排（上午/下午），支持核心日程与临时日程的区分。
+- **快捷操作**：支持在移动端直接添加、修改日程，并可上传图片附件。
 
-**Prerequisites:**  Node.js
+### 💾 数据存储
+- 采用 **SQLite** 本地数据库持久化存储，部署简单，无需额外配置复杂的数据库环境。
 
+## 🚀 一键部署
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+本项目提供了一键部署脚本，可直接从 GitHub 拉取最新代码并运行。
+
+```bash
+curl -O https://raw.githubusercontent.com/AomoDa/Dwork/main/deploy.sh
+chmod +x deploy.sh
+./deploy.sh
+```
+
+## 🛠️ 技术栈
+
+- **前端**：React 18, React Router, Tailwind CSS, Lucide Icons, Vite
+- **后端**：Node.js, Express
+- **数据库**：SQLite (@libsql/client)
+
+## 📄 开源协议
+
+本项目基于 [MIT License](LICENSE) 开源。

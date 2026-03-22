@@ -6,7 +6,7 @@ export default function AdminLayout() {
   const token = searchParams.get('token');
   const location = useLocation();
 
-  if (!token) return <div className="p-8 text-center text-error font-bold">Missing admin token in URL (?token=yourtoken)</div>;
+  if (!token) return <div className="p-8 text-center text-error font-bold">ERROR:无权限</div>;
 
   return (
     <div className="flex h-screen bg-surface text-on-surface">
@@ -18,8 +18,8 @@ export default function AdminLayout() {
               <Users className="text-white w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-white font-black text-xl tracking-tight">领航者团队</h2>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">专业管理控制台</p>
+              <h2 className="text-white font-black text-xl tracking-tight">行事历</h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">管理控制台</p>
             </div>
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function AdminLayout() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
               <input 
                 type="text" 
-                placeholder="搜索团队成员、职位或ID..." 
+                placeholder="搜索团队成员..." 
                 className="w-full bg-surface-container-highest border-none rounded-md py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none"
               />
             </div>
