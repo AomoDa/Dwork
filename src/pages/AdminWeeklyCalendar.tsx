@@ -150,9 +150,9 @@ export default function AdminWeeklyCalendar() {
         {/* Grid Body */}
         <div className="flex-1 overflow-y-auto">
           {members.map(member => (
-            <div key={member.id} className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-outline-variant/5 last:border-0 hover:bg-surface-container-lowest/50 transition-colors">
+            <div key={member.id} className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b-[4px] border-surface-container-low last:border-0 hover:bg-surface-container-lowest/50 transition-colors">
               {/* Member Name Column */}
-              <div className="py-2 px-2 border-r border-outline-variant/5 flex items-center justify-center font-bold text-[13px] text-on-surface">
+              <div className="py-4 px-2 border-r border-outline-variant/5 flex items-center justify-center font-bold text-[15px] text-on-surface">
                 {member.name}
               </div>
               
@@ -172,26 +172,26 @@ export default function AdminWeeklyCalendar() {
                         setSelectedCell({ memberId: member.id, date: dateStr });
                       }
                     }}
-                    className={`p-1.5 border-r border-outline-variant/5 last:border-0 flex flex-col gap-1.5 justify-center transition-colors ${hasSchedules ? 'bg-primary/5 hover:bg-primary/10 cursor-pointer' : ''}`}
+                    className={`p-2 border-r border-outline-variant/5 last:border-0 flex flex-row gap-1.5 justify-center items-center transition-colors ${hasSchedules ? 'bg-primary/5 hover:bg-primary/10 cursor-pointer' : ''}`}
                   >
                     {/* AM Block */}
                     {amSchedules.length > 0 ? (
-                      <div className="w-full bg-primary text-white text-[11px] py-1 rounded-sm text-center font-medium shadow-sm flex items-center justify-center gap-1">
+                      <div className="flex-1 h-[32px] bg-primary text-white text-[11px] rounded-md text-center font-medium shadow-sm flex items-center justify-center gap-1">
                         上午
                         {amSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
                       </div>
                     ) : (
-                      <div className="w-full h-[22px] flex items-center justify-center bg-surface-container-low/20 text-outline-variant/30 text-[10px] rounded-sm border border-dashed border-outline-variant/20">-</div>
+                      <div className="flex-1 h-[32px] flex items-center justify-center bg-surface-container-low/30 text-outline-variant/40 text-[11px] rounded-md border border-dashed border-outline-variant/20">上午</div>
                     )}
                     
                     {/* PM Block */}
                     {pmSchedules.length > 0 ? (
-                      <div className="w-full bg-primary text-white text-[11px] py-1 rounded-sm text-center font-medium shadow-sm flex items-center justify-center gap-1">
+                      <div className="flex-1 h-[32px] bg-primary text-white text-[11px] rounded-md text-center font-medium shadow-sm flex items-center justify-center gap-1">
                         下午
                         {pmSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
                       </div>
                     ) : (
-                      <div className="w-full h-[22px] flex items-center justify-center bg-surface-container-low/20 text-outline-variant/30 text-[10px] rounded-sm border border-dashed border-outline-variant/20">-</div>
+                      <div className="flex-1 h-[32px] flex items-center justify-center bg-surface-container-low/30 text-outline-variant/40 text-[11px] rounded-md border border-dashed border-outline-variant/20">下午</div>
                     )}
                   </div>
                 );
