@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from 'lucide-react';
@@ -44,14 +44,26 @@ export default function AdminCalendar() {
     });
   }, [token]);
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const monthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
+  const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
+  const startDate = useMemo(() => startOfWeek(monthStart, { weekStartsOn: 1 }), [monthStart]);
+  const endDate = useMemo(() => endOfWeek(monthEnd, { weekStartsOn: 1 }), [monthEnd]);
+  const days = useMemo(() => eachDayOfInterval({ start: startDate, end: endDate }), [startDate, endDate]);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+
+  const activeMemberIds = useMemo(() => new Set(members.map(m => m.id)), [members]);
+
+  const schedulesByDate = useMemo(() => {
+    const map = new Map<string, Schedule[]>();
+    schedules.forEach(s => {
+      if (!activeMemberIds.has(s.memberId)) return;
+      if (!map.has(s.date)) map.set(s.date, []);
+      map.get(s.date)!.push(s);
+    });
+    return map;
+  }, [schedules, activeMemberIds]);
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
@@ -110,10 +122,7 @@ export default function AdminCalendar() {
         <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto">
           {days.map((day, i) => {
             const dateStr = format(day, 'yyyy-MM-dd');
-            const daySchedules = schedules.filter(s => {
-              const memberExists = members.some(m => m.id === s.memberId);
-              return memberExists && s.date === dateStr && (!selectedMemberId || s.memberId === selectedMemberId);
-            });
+            const daySchedules = (schedulesByDate.get(dateStr) || []).filter(s => !selectedMemberId || s.memberId === selectedMemberId);
             const isCurrentMonth = isSameMonth(day, monthStart);
 
             // Group by memberId
@@ -176,7 +185,7 @@ export default function AdminCalendar() {
             <div className="flex flex-1 overflow-hidden min-h-[400px]">
               {/* Sidebar Tabs */}
               <div className="w-1/3 border-r border-outline-variant/10 bg-surface-container-lowest overflow-y-auto p-4 space-y-2">
-                {members.filter(m => schedules.some(s => s.date === selectedDateStr && s.memberId === m.id)).map(member => (
+                {members.filter(m => (schedulesByDate.get(selectedDateStr) || []).some(s => s.memberId === m.id)).map(member => (
                   <button
                     key={member.id}
                     onClick={() => setSelectedTabMemberId(member.id)}
@@ -199,7 +208,7 @@ export default function AdminCalendar() {
                 {selectedTabMemberId && (
                   <div className="space-y-8">
                     {['AM', 'PM'].map(timeOfDay => {
-                      const timeSchedules = schedules.filter(s => s.date === selectedDateStr && s.memberId === selectedTabMemberId && s.timeOfDay === timeOfDay);
+                      const timeSchedules = (schedulesByDate.get(selectedDateStr) || []).filter(s => s.memberId === selectedTabMemberId && s.timeOfDay === timeOfDay);
                       return (
                         <div key={timeOfDay} className="space-y-4">
                           <div className="text-sm font-bold text-primary uppercase tracking-wider border-b border-outline-variant/10 pb-2">

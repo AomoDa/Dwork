@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, getISOWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, X, Download } from 'lucide-react';
@@ -46,14 +46,24 @@ export default function AdminWeeklyCalendar() {
     });
   }, [token]);
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+  const weekEnd = useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+  const days = useMemo(() => eachDayOfInterval({ start: weekStart, end: weekEnd }), [weekStart, weekEnd]);
   const weekNum = getISOWeek(currentDate);
   const year = format(weekStart, 'yyyy');
 
   const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
   const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+
+  const scheduleMap = useMemo(() => {
+    const map = new Map<string, Schedule[]>();
+    schedules.forEach(s => {
+      const key = `${s.memberId}-${s.date}-${s.timeOfDay}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    });
+    return map;
+  }, [schedules]);
 
   const handleExport = () => {
     const start = startOfWeek(new Date(exportStartDate), { weekStartsOn: 1 });
@@ -79,8 +89,8 @@ export default function AdminWeeklyCalendar() {
         const row = [member.name];
         weekDays.forEach(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
-          const amSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'AM');
-          const pmSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'PM');
+          const amSchedules = scheduleMap.get(`${member.id}-${dateStr}-AM`) || [];
+          const pmSchedules = scheduleMap.get(`${member.id}-${dateStr}-PM`) || [];
           
           let cellText = '';
           if (amSchedules.length > 0) {
@@ -163,8 +173,8 @@ export default function AdminWeeklyCalendar() {
               {/* Days Columns */}
               {days.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd');
-                const amSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'AM');
-                const pmSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'PM');
+                const amSchedules = scheduleMap.get(`${member.id}-${dateStr}-AM`) || [];
+                const pmSchedules = scheduleMap.get(`${member.id}-${dateStr}-PM`) || [];
 
                 const hasAm = amSchedules.length > 0;
                 const hasPm = pmSchedules.length > 0;
@@ -235,7 +245,9 @@ export default function AdminWeeklyCalendar() {
               <div className="w-1/3 border-r border-outline-variant/10 bg-surface-container-lowest overflow-y-auto p-4 space-y-2">
                 {days.map(day => {
                   const dateStr = format(day, 'yyyy-MM-dd');
-                  const daySchedules = schedules.filter(s => s.memberId === selectedCell.memberId && s.date === dateStr);
+                  const amSchedules = scheduleMap.get(`${selectedCell.memberId}-${dateStr}-AM`) || [];
+                  const pmSchedules = scheduleMap.get(`${selectedCell.memberId}-${dateStr}-PM`) || [];
+                  const daySchedules = [...amSchedules, ...pmSchedules];
                   const hasData = daySchedules.length > 0;
                   
                   return (
@@ -261,7 +273,7 @@ export default function AdminWeeklyCalendar() {
               <div className="w-2/3 p-6 overflow-y-auto bg-surface">
                 <div className="space-y-8">
                   {['AM', 'PM'].map(timeOfDay => {
-                    const timeSchedules = schedules.filter(s => s.date === selectedCell.date && s.memberId === selectedCell.memberId && s.timeOfDay === timeOfDay);
+                    const timeSchedules = scheduleMap.get(`${selectedCell.memberId}-${selectedCell.date}-${timeOfDay}`) || [];
                     return (
                       <div key={timeOfDay} className="space-y-4">
                         <div className="text-sm font-bold text-primary uppercase tracking-wider border-b border-outline-variant/10 pb-2">

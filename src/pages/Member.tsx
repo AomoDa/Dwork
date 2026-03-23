@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -77,11 +77,11 @@ export default function Member() {
       });
   }, [path]);
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const monthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
+  const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
+  const startDate = useMemo(() => startOfWeek(monthStart, { weekStartsOn: 1 }), [monthStart]);
+  const endDate = useMemo(() => endOfWeek(monthEnd, { weekStartsOn: 1 }), [monthEnd]);
+  const days = useMemo(() => eachDayOfInterval({ start: startDate, end: endDate }), [startDate, endDate]);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -170,12 +170,29 @@ export default function Member() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error || !member) return <div className="p-8 text-center text-error font-bold">{error || 'Not found'}</div>;
 
-  const currentMonthSchedules = schedules.filter(s => s.date.startsWith(format(currentMonth, 'yyyy-MM')));
-  const amCount = currentMonthSchedules.filter(s => s.timeOfDay === 'AM').length;
-  const pmCount = currentMonthSchedules.filter(s => s.timeOfDay === 'PM').length;
-  const uniqueDays = new Set(currentMonthSchedules.map(s => s.date)).size;
+  const schedulesByDate = useMemo(() => {
+    const map = new Map<string, Schedule[]>();
+    schedules.forEach(s => {
+      if (!map.has(s.date)) map.set(s.date, []);
+      map.get(s.date)!.push(s);
+    });
+    return map;
+  }, [schedules]);
 
-  const todaysSchedules = schedules.filter(s => s.date === format(selectedDate, 'yyyy-MM-dd')).sort((a, b) => a.timeOfDay === 'AM' ? -1 : 1);
+  const currentMonthSchedules = useMemo(() => {
+    const prefix = format(currentMonth, 'yyyy-MM');
+    return schedules.filter(s => s.date.startsWith(prefix));
+  }, [schedules, currentMonth]);
+
+  const amCount = useMemo(() => currentMonthSchedules.filter(s => s.timeOfDay === 'AM').length, [currentMonthSchedules]);
+  const pmCount = useMemo(() => currentMonthSchedules.filter(s => s.timeOfDay === 'PM').length, [currentMonthSchedules]);
+  const uniqueDays = useMemo(() => new Set(currentMonthSchedules.map(s => s.date)).size, [currentMonthSchedules]);
+
+  const todaysSchedules = useMemo(() => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    return (schedulesByDate.get(dateStr) || []).sort((a, b) => a.timeOfDay === 'AM' ? -1 : 1);
+  }, [schedulesByDate, selectedDate]);
+  
   const isSelectedDateEditable = isDateEditable(selectedDate);
 
   return (
@@ -384,7 +401,7 @@ export default function Member() {
           <div className="grid grid-cols-7 gap-px bg-surface-container-high">
             {days.map(day => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              const daySchedules = schedules.filter(s => s.date === dateStr);
+              const daySchedules = schedulesByDate.get(dateStr) || [];
               const isCurrentMonth = isSameMonth(day, monthStart);
 
               return (
