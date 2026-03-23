@@ -167,9 +167,6 @@ export default function Member() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
-  if (error || !member) return <div className="p-8 text-center text-error font-bold">{error || 'Not found'}</div>;
-
   const schedulesByDate = useMemo(() => {
     const map = new Map<string, Schedule[]>();
     schedules.forEach(s => {
@@ -190,10 +187,13 @@ export default function Member() {
 
   const todaysSchedules = useMemo(() => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return (schedulesByDate.get(dateStr) || []).sort((a, b) => a.timeOfDay === 'AM' ? -1 : 1);
+    return [...(schedulesByDate.get(dateStr) || [])].sort((a, b) => a.timeOfDay === 'AM' ? -1 : 1);
   }, [schedulesByDate, selectedDate]);
   
   const isSelectedDateEditable = isDateEditable(selectedDate);
+
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (error || !member) return <div className="p-8 text-center text-error font-bold">{error || 'Not found'}</div>;
 
   return (
     <div className="bg-surface min-h-screen flex flex-col font-sans text-on-surface">
