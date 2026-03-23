@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, getISOWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, X, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Schedule {
   id: string;
@@ -26,6 +27,11 @@ export default function AdminWeeklyCalendar() {
   const [loading, setLoading] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
 
+  // Export Modal State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+  const [exportEndDate, setExportEndDate] = useState(format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/admin/schedules?token=${token}`).then(res => res.json()),
@@ -49,6 +55,58 @@ export default function AdminWeeklyCalendar() {
   const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
   const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
 
+  const handleExport = () => {
+    const start = startOfWeek(new Date(exportStartDate), { weekStartsOn: 1 });
+    const end = endOfWeek(new Date(exportEndDate), { weekStartsOn: 1 });
+    
+    if (start > end) {
+      alert('开始时间不能晚于结束时间');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    let currentWeekStart = start;
+
+    while (currentWeekStart <= end) {
+      const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+      const weekDays = eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd });
+      
+      const sheetData: any[][] = [];
+      const header = ['队员', ...weekDays.map(d => `${format(d, 'MM/dd')} (${format(d, 'E')})`)];
+      sheetData.push(header);
+      
+      members.forEach(member => {
+        const row = [member.name];
+        weekDays.forEach(day => {
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const amSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'AM');
+          const pmSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'PM');
+          
+          let cellText = '';
+          if (amSchedules.length > 0) {
+            cellText += `[上午]\n${amSchedules.map(s => s.content).join('\n')}\n`;
+          }
+          if (pmSchedules.length > 0) {
+            cellText += `[下午]\n${pmSchedules.map(s => s.content).join('\n')}`;
+          }
+          row.push(cellText.trim());
+        });
+        sheetData.push(row);
+      });
+      
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws['!cols'] = [{ wch: 15 }, ...weekDays.map(() => ({ wch: 25 }))];
+      
+      const sheetName = `第${getISOWeek(currentWeekStart)}周(${format(currentWeekStart, 'MM.dd')}-${format(currentWeekEnd, 'MM.dd')})`;
+      XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+      
+      currentWeekStart = addWeeks(currentWeekStart, 1);
+    }
+    
+    XLSX.writeFile(wb, `日程导出_${format(start, 'yyyyMMdd')}-${format(end, 'yyyyMMdd')}.xlsx`);
+    setShowExportModal(false);
+  };
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
@@ -57,13 +115,22 @@ export default function AdminWeeklyCalendar() {
         <h2 className="text-2xl font-bold text-on-surface tracking-tight">
           {year}年第{weekNum}周 <span className="text-lg font-medium text-on-surface-variant ml-2">({format(weekStart, 'MM/dd')} ~ {format(weekEnd, 'MM/dd')})</span>
         </h2>
-        <div className="flex gap-2">
-          <button onClick={prevWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
-            <ChevronLeft className="w-5 h-5" />
+        <div className="flex gap-4">
+          <button 
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg font-semibold transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            导出表格
           </button>
-          <button onClick={nextWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button onClick={prevWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button onClick={nextWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -178,6 +245,59 @@ export default function AdminWeeklyCalendar() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowExportModal(false)}>
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-on-surface">导出日程表格</h3>
+              <button onClick={() => setShowExportModal(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+                <X className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">开始周 (选择该周任意一天)</label>
+                <input 
+                  type="date" 
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                  className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">结束周 (选择该周任意一天)</label>
+                <input 
+                  type="date" 
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                  className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none"
+                />
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                导出将包含所选日期所在的整个自然周。每个自然周将生成一个独立的 Excel Sheet。
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setShowExportModal(false)} 
+                className="px-4 py-2 text-sm font-bold text-on-surface bg-surface-container-high hover:bg-surface-container-highest rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleExport} 
+                className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-blue-700 rounded-lg shadow-md shadow-primary/20 transition-colors"
+              >
+                确认导出
+              </button>
             </div>
           </div>
         </div>

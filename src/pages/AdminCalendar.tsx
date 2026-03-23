@@ -25,7 +25,10 @@ export default function AdminCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [selectedDayMember, setSelectedDayMember] = useState<{ memberId: string, date: string, schedules: Schedule[] } | null>(null);
+  
+  // Modal state
+  const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+  const [selectedTabMemberId, setSelectedTabMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -117,27 +120,33 @@ export default function AdminCalendar() {
               return acc;
             }, {} as Record<string, Schedule[]>);
 
+            const hasSchedules = Object.keys(groupedByMember).length > 0;
+
             return (
-              <div key={day.toString()} className={`p-2 border-r border-b border-outline-variant/5 ${!isCurrentMonth ? 'bg-surface-container-low/30 text-outline/40' : 'hover:bg-surface-container-low transition-colors'}`}>
-                <div className={`text-sm font-semibold mb-2 ${isToday(day) ? 'text-primary' : ''}`}>
+              <div 
+                key={day.toString()} 
+                onClick={() => {
+                  if (hasSchedules) {
+                    setSelectedDateStr(dateStr);
+                    setSelectedTabMemberId(Object.keys(groupedByMember)[0]);
+                  }
+                }}
+                className={`p-2 border-r border-b border-outline-variant/5 flex flex-col ${hasSchedules ? 'cursor-pointer' : ''} ${!isCurrentMonth ? 'bg-surface-container-low/30 text-outline/40' : 'hover:bg-surface-container-low transition-colors'}`}
+              >
+                <div className={`text-sm font-semibold mb-auto ${isToday(day) ? 'text-primary' : ''}`}>
                   {format(day, 'd')}
                 </div>
-                <div className="space-y-1 overflow-y-auto max-h-24 no-scrollbar">
-                  {Object.entries(groupedByMember).map(([memberId, schedulesArray]) => {
-                    const memberSchedules = schedulesArray as Schedule[];
+                <div className="flex flex-wrap gap-1 mt-2 justify-start">
+                  {Object.keys(groupedByMember).map(memberId => {
                     const member = members.find(m => m.id === memberId);
-                    const hasImage = memberSchedules.some(s => s.image);
-                    const contents = memberSchedules.map(s => `${s.timeOfDay === 'AM' ? '上午' : '下午'}: ${s.content}`).join('\n');
-                    
+                    if (!member) return null;
                     return (
                       <div 
                         key={memberId} 
-                        onClick={() => setSelectedDayMember({ memberId, date: dateStr, schedules: memberSchedules })}
-                        className="text-[11px] px-2 py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-sm truncate flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity" 
-                        title={`${member?.name}:\n${contents}`}
+                        className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold shadow-sm"
+                        title={member.name}
                       >
-                        <span className="truncate font-bold">{member?.name}</span>
-                        {hasImage && <ImageIcon className="w-3 h-3 ml-1 shrink-0 opacity-70" />}
+                        {member.name.charAt(0)}
                       </div>
                     );
                   })}
@@ -149,44 +158,72 @@ export default function AdminCalendar() {
       </div>
 
       {/* Schedule Detail Modal */}
-      {selectedDayMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedDayMember(null)}>
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-surface z-10 pb-2 border-b border-outline-variant/10">
+      {selectedDateStr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedDateStr(null)}>
+          <div className="bg-surface rounded-2xl w-full max-w-3xl shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-outline-variant/10">
               <h3 className="text-xl font-bold text-on-surface">
-                {members.find(m => m.id === selectedDayMember.memberId)?.name} 的行程
+                {selectedDateStr} 日程详情
               </h3>
-              <button onClick={() => setSelectedDayMember(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+              <button onClick={() => setSelectedDateStr(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
             
-            <div className="space-y-6">
-              <div className="text-sm font-bold text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-md inline-block">
-                {selectedDayMember.date}
+            <div className="flex flex-1 overflow-hidden min-h-[400px]">
+              {/* Sidebar Tabs */}
+              <div className="w-1/3 border-r border-outline-variant/10 bg-surface-container-lowest overflow-y-auto p-4 space-y-2">
+                {members.filter(m => schedules.some(s => s.date === selectedDateStr && s.memberId === m.id)).map(member => (
+                  <button
+                    key={member.id}
+                    onClick={() => setSelectedTabMemberId(member.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-3 ${
+                      selectedTabMemberId === member.id 
+                        ? 'bg-primary text-white shadow-md' 
+                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${selectedTabMemberId === member.id ? 'bg-white/20' : 'bg-surface-container-high text-primary'}`}>
+                      {member.name.charAt(0)}
+                    </div>
+                    {member.name}
+                  </button>
+                ))}
               </div>
-
-              {selectedDayMember.schedules.map(schedule => (
-                <div key={schedule.id} className="space-y-4 pb-6 border-b border-outline-variant/10 last:border-0 last:pb-0">
-                  <div>
-                    <div className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-                      {schedule.timeOfDay === 'AM' ? '上午' : '下午'}
-                    </div>
-                    <div className="text-on-surface whitespace-pre-wrap bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
-                      {schedule.content}
-                    </div>
+              
+              {/* Content Area */}
+              <div className="w-2/3 p-6 overflow-y-auto bg-surface">
+                {selectedTabMemberId && (
+                  <div className="space-y-8">
+                    {['AM', 'PM'].map(timeOfDay => {
+                      const timeSchedules = schedules.filter(s => s.date === selectedDateStr && s.memberId === selectedTabMemberId && s.timeOfDay === timeOfDay);
+                      return (
+                        <div key={timeOfDay} className="space-y-4">
+                          <div className="text-sm font-bold text-primary uppercase tracking-wider border-b border-outline-variant/10 pb-2">
+                            {timeOfDay === 'AM' ? '上午' : '下午'}
+                          </div>
+                          {timeSchedules.length > 0 ? (
+                            timeSchedules.map(schedule => (
+                              <div key={schedule.id} className="space-y-3">
+                                <div className="text-on-surface whitespace-pre-wrap bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 text-sm">
+                                  {schedule.content}
+                                </div>
+                                {schedule.image && (
+                                  <div className="rounded-xl overflow-hidden border border-outline-variant/20">
+                                    <img src={schedule.image} alt="行程附件" className="w-full h-auto max-h-64 object-contain bg-surface-container-lowest" />
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-on-surface-variant/50 italic py-2">无行程安排</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  {schedule.image && (
-                    <div>
-                      <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">附件图片</div>
-                      <div className="rounded-lg overflow-hidden border border-outline-variant/20">
-                        <img src={schedule.image} alt="行程附件" className="w-full h-auto max-h-64 object-contain bg-surface-container-lowest" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                )}
+              </div>
             </div>
           </div>
         </div>

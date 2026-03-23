@@ -61,8 +61,33 @@ export default function AdminMembers() {
 
   const copyUrl = (path: string) => {
     const url = `${window.location.origin}/m/${path}`;
-    navigator.clipboard.writeText(url);
-    showToast('链接已复制到剪贴板！');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('链接已复制到剪贴板！');
+      }).catch(() => {
+        fallbackCopyTextToClipboard(url);
+      });
+    } else {
+      fallbackCopyTextToClipboard(url);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast('链接已复制到剪贴板！');
+    } catch (err) {
+      showToast('复制失败，请手动复制');
+    }
+    textArea.remove();
   };
 
   const showQrCode = (path: string) => {
@@ -83,17 +108,6 @@ export default function AdminMembers() {
           >
             <UserPlus className="w-4 h-4" />
             添加新成员
-          </button>
-          <button 
-            onClick={() => {
-              const url = `${window.location.origin}/directory?token=${token}`;
-              navigator.clipboard.writeText(url);
-              showToast('集合页链接已复制到剪贴板！');
-            }}
-            className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-6 py-2 rounded-lg font-semibold transition-colors"
-          >
-            <LinkIcon className="w-4 h-4" />
-            复制集合页链接
           </button>
         </div>
       </div>
