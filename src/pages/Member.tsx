@@ -370,7 +370,7 @@ export default function Member() {
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => handleDelete(schedule.id)} className="text-on-surface-variant hover:text-error transition-colors">
+                  <button onClick={(e) => handleDelete(schedule.id, schedule.date, e)} className="text-on-surface-variant hover:text-error transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -428,7 +428,7 @@ export default function Member() {
                       <div key={schedule.id} className="relative px-2 py-0.5 bg-primary-fixed text-[10px] font-bold text-on-primary-fixed rounded truncate group/item">
                         {schedule.timeOfDay === 'AM' ? '上午' : '下午'} - {schedule.content}
                         <button 
-                          onClick={(e) => handleDelete(schedule.id, e)}
+                          onClick={(e) => handleDelete(schedule.id, schedule.date, e)}
                           className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 text-error hover:bg-error-container rounded p-0.5"
                         >
                           <Trash2 className="w-3 h-3" />
