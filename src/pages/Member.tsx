@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { Calendar as CalendarIcon, LogOut, Image as ImageIcon, Trash2, X, Info, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 interface Member {
   id: string;
@@ -98,12 +99,23 @@ export default function Member() {
     setShowModal(true);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const options = {
+          maxSizeMB: 0.2, // Compress to ~200KB
+          maxWidthOrHeight: 1280,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        const reader = new FileReader();
+        reader.onloadend = () => setImage(reader.result as string);
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        showToast('图片压缩失败，请重试');
+      }
     }
   };
 
