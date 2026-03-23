@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { UserPlus, Link as LinkIcon, Copy, QrCode, X } from 'lucide-react';
+import { UserPlus, Link as LinkIcon, Copy, QrCode, X, Trash2, RotateCcw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface Member {
   id: string;
   name: string;
   path: string;
+  isDeleted?: number;
 }
 
 export default function AdminMembers() {
@@ -25,7 +26,7 @@ export default function AdminMembers() {
   };
 
   useEffect(() => {
-    fetch(`/api/admin/members?token=${token}`)
+    fetch(`/api/admin/members?token=${token}&all=true`)
       .then(res => {
         if (!res.ok) throw new Error('Unauthorized or server error');
         return res.json();
@@ -39,6 +40,24 @@ export default function AdminMembers() {
         setLoading(false);
       });
   }, [token]);
+
+  const toggleMemberStatus = async (id: string, currentStatus: number | undefined) => {
+    const isDeleted = currentStatus === 1;
+    const newStatus = !isDeleted;
+    try {
+      const res = await fetch(`/api/admin/members/${id}?token=${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isDeleted: newStatus })
+      });
+      if (!res.ok) throw new Error('Failed to update member status');
+      
+      setMembers(members.map(m => m.id === id ? { ...m, isDeleted: newStatus ? 1 : 0 } : m));
+      showToast(newStatus ? '成员已删除' : '成员已恢复');
+    } catch (err: any) {
+      showToast(err.message);
+    }
+  };
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,36 +134,58 @@ export default function AdminMembers() {
       {/* Table */}
       <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container-high">
         <div className="grid grid-cols-12 bg-surface-container-low px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
-          <div className="col-span-8">成员信息</div>
-          <div className="col-span-4 text-right">专属 URL 操作</div>
+          <div className="col-span-6">成员信息</div>
+          <div className="col-span-6 text-right">操作</div>
         </div>
         <div className="divide-y divide-surface-container-high">
-          {members.map(member => (
-            <div key={member.id} className="grid grid-cols-12 px-6 py-5 items-center hover:bg-surface-container-low transition-colors group">
-              <div className="col-span-8 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary font-bold text-lg">
-                  {member.name.charAt(0)}
+          {members.map(member => {
+            const isDeleted = member.isDeleted === 1;
+            return (
+              <div key={member.id} className={`grid grid-cols-12 px-6 py-5 items-center hover:bg-surface-container-low transition-colors group ${isDeleted ? 'opacity-60 grayscale' : ''}`}>
+                <div className="col-span-6 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${isDeleted ? 'bg-surface-container-high text-on-surface-variant' : 'bg-surface-container-high text-primary'}`}>
+                    {member.name.charAt(0)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`font-bold ${isDeleted ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{member.name}</h3>
+                    {isDeleted && <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full font-bold">已删除</span>}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-on-surface">{member.name}</h3>
+                <div className="col-span-6 flex justify-end gap-2">
+                  {!isDeleted && (
+                    <>
+                      <button 
+                        onClick={() => showQrCode(member.path)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <QrCode className="w-4 h-4" /> 二维码
+                      </button>
+                      <button 
+                        onClick={() => copyUrl(member.path)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <LinkIcon className="w-4 h-4" /> 复制 URL
+                      </button>
+                    </>
+                  )}
+                  <button 
+                    onClick={() => toggleMemberStatus(member.id, member.isDeleted)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                      isDeleted 
+                        ? 'text-primary bg-primary/10 hover:bg-primary/20' 
+                        : 'text-error bg-error/10 hover:bg-error/20'
+                    }`}
+                  >
+                    {isDeleted ? (
+                      <><RotateCcw className="w-4 h-4" /> 恢复</>
+                    ) : (
+                      <><Trash2 className="w-4 h-4" /> 删除</>
+                    )}
+                  </button>
                 </div>
               </div>
-              <div className="col-span-4 flex justify-end gap-2">
-                <button 
-                  onClick={() => showQrCode(member.path)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <QrCode className="w-4 h-4" /> 二维码
-                </button>
-                <button 
-                  onClick={() => copyUrl(member.path)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <LinkIcon className="w-4 h-4" /> 复制 URL
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {members.length === 0 && (
             <div className="p-8 text-center text-on-surface-variant text-sm">暂无成员</div>
           )}

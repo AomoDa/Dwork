@@ -20,6 +20,12 @@ async function initDb() {
     )
   `);
 
+  try {
+    await db.execute('ALTER TABLE members ADD COLUMN isDeleted INTEGER DEFAULT 0');
+  } catch (e) {
+    // Column might already exist, ignore
+  }
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS schedules (
       id TEXT PRIMARY KEY,
@@ -110,8 +116,25 @@ async function startServer() {
     if (req.query.token !== token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const result = await db.execute('SELECT * FROM members');
+    const includeDeleted = req.query.all === 'true';
+    const query = includeDeleted 
+      ? 'SELECT * FROM members' 
+      : 'SELECT * FROM members WHERE isDeleted = 0 OR isDeleted IS NULL';
+    const result = await db.execute(query);
     res.json(result.rows);
+  });
+
+  app.patch('/api/admin/members/:id', async (req, res) => {
+    const token = await getAdminToken();
+    if (req.query.token !== token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const { isDeleted } = req.body;
+    await db.execute({
+      sql: 'UPDATE members SET isDeleted = ? WHERE id = ?',
+      args: [isDeleted ? 1 : 0, req.params.id]
+    });
+    res.json({ success: true });
   });
 
   app.get('/api/admin/schedules', async (req, res) => {
@@ -142,21 +165,21 @@ async function startServer() {
 
   app.get('/api/member/:path', async (req, res) => {
     const result = await db.execute({
-      sql: 'SELECT * FROM members WHERE path = ?',
+      sql: 'SELECT * FROM members WHERE path = ? AND (isDeleted = 0 OR isDeleted IS NULL)',
       args: [req.params.path]
     });
     const member = result.rows[0];
-    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (!member) return res.status(404).json({ error: 'Member not found or deleted' });
     res.json(member);
   });
 
   app.get('/api/member/:path/schedules', async (req, res) => {
     const memberRes = await db.execute({
-      sql: 'SELECT id FROM members WHERE path = ?',
+      sql: 'SELECT id FROM members WHERE path = ? AND (isDeleted = 0 OR isDeleted IS NULL)',
       args: [req.params.path]
     });
     const member = memberRes.rows[0];
-    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (!member) return res.status(404).json({ error: 'Member not found or deleted' });
     
     const schedulesRes = await db.execute({
       sql: 'SELECT * FROM schedules WHERE memberId = ?',
@@ -167,11 +190,11 @@ async function startServer() {
 
   app.post('/api/member/:path/schedules', async (req, res) => {
     const memberRes = await db.execute({
-      sql: 'SELECT id FROM members WHERE path = ?',
+      sql: 'SELECT id FROM members WHERE path = ? AND (isDeleted = 0 OR isDeleted IS NULL)',
       args: [req.params.path]
     });
     const member = memberRes.rows[0];
-    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (!member) return res.status(404).json({ error: 'Member not found or deleted' });
 
     const newSchedule = {
       id: Date.now().toString(),
@@ -193,11 +216,11 @@ async function startServer() {
 
   app.delete('/api/member/:path/schedules/:id', async (req, res) => {
     const memberRes = await db.execute({
-      sql: 'SELECT id FROM members WHERE path = ?',
+      sql: 'SELECT id FROM members WHERE path = ? AND (isDeleted = 0 OR isDeleted IS NULL)',
       args: [req.params.path]
     });
     const member = memberRes.rows[0];
-    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (!member) return res.status(404).json({ error: 'Member not found or deleted' });
 
     await db.execute({
       sql: 'DELETE FROM schedules WHERE id = ? AND memberId = ?',
