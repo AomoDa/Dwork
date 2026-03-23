@@ -111,10 +111,14 @@ export default function AdminWeeklyCalendar() {
 
   return (
     <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-on-surface tracking-tight">
-          {year}年第{weekNum}周 <span className="text-base font-medium text-on-surface-variant ml-2">({format(weekStart, 'MM/dd')} ~ {format(weekEnd, 'MM/dd')})</span>
-        </h2>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-6">
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-baseline gap-2">
+            {year}年第{weekNum}周 
+            <span className="text-sm font-medium text-slate-500 tracking-wide">({format(weekStart, 'MM/dd')} ~ {format(weekEnd, 'MM/dd')})</span>
+          </h2>
+        </div>
+
         <div className="flex gap-3">
           <button 
             onClick={() => setShowExportModal(true)}
@@ -134,14 +138,14 @@ export default function AdminWeeklyCalendar() {
         </div>
       </div>
 
-      <div className="flex-1 bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/10 flex flex-col">
+      <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60 flex flex-col">
         {/* Header Row */}
-        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-surface-container-low text-on-surface-variant border-b border-outline-variant/5">
-          <div className="py-2 px-2 text-[11px] font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 flex items-center justify-center">
+        <div className="grid grid-cols-[90px_repeat(7,minmax(0,1fr))] bg-slate-50/80 text-slate-500 border-b border-slate-200/60">
+          <div className="py-3 px-2 text-[12px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center">
             队员
           </div>
           {days.map(day => (
-            <div key={day.toString()} className="py-2 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 last:border-0">
+            <div key={day.toString()} className="py-3 px-1 text-[12px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 last:border-0">
               {format(day, 'E')} <span className="font-medium opacity-70 ml-0.5">{format(day, 'MM/dd')}</span>
             </div>
           ))}
@@ -150,9 +154,9 @@ export default function AdminWeeklyCalendar() {
         {/* Grid Body */}
         <div className="flex-1 overflow-y-auto">
           {members.map(member => (
-            <div key={member.id} className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b-[4px] border-surface-container-low last:border-0 hover:bg-surface-container-lowest/50 transition-colors">
+            <div key={member.id} className="grid grid-cols-[90px_repeat(7,minmax(0,1fr))] border-b-[4px] border-slate-50/80 last:border-0 hover:bg-slate-50/50 transition-colors group">
               {/* Member Name Column */}
-              <div className="py-4 px-2 border-r border-outline-variant/5 flex items-center justify-center font-bold text-[15px] text-on-surface">
+              <div className="py-4 px-2 border-r border-slate-200/60 flex items-center justify-center font-bold text-[15px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors">
                 {member.name}
               </div>
               
@@ -162,7 +166,34 @@ export default function AdminWeeklyCalendar() {
                 const amSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'AM');
                 const pmSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'PM');
 
-                const hasSchedules = amSchedules.length > 0 || pmSchedules.length > 0;
+                const hasAm = amSchedules.length > 0;
+                const hasPm = pmSchedules.length > 0;
+                const hasSchedules = hasAm || hasPm;
+                const hasImage = amSchedules.some(s => s.image) || pmSchedules.some(s => s.image);
+
+                let cellContent = null;
+                if (hasAm && hasPm) {
+                  cellContent = (
+                    <div className="w-full h-[36px] bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-[13px] rounded-lg text-center font-bold shadow-sm shadow-indigo-500/20 flex items-center justify-center gap-1.5 transform transition-transform hover:scale-[1.02]">
+                      全天
+                      {hasImage && <ImageIcon className="w-3.5 h-3.5 opacity-90" />}
+                    </div>
+                  );
+                } else if (hasAm) {
+                  cellContent = (
+                    <div className="w-full h-[36px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[13px] rounded-lg text-center font-bold shadow-sm shadow-emerald-500/20 flex items-center justify-center gap-1.5 transform transition-transform hover:scale-[1.02]">
+                      上午
+                      {hasImage && <ImageIcon className="w-3.5 h-3.5 opacity-90" />}
+                    </div>
+                  );
+                } else if (hasPm) {
+                  cellContent = (
+                    <div className="w-full h-[36px] bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[13px] rounded-lg text-center font-bold shadow-sm shadow-amber-500/20 flex items-center justify-center gap-1.5 transform transition-transform hover:scale-[1.02]">
+                      下午
+                      {hasImage && <ImageIcon className="w-3.5 h-3.5 opacity-90" />}
+                    </div>
+                  );
+                }
 
                 return (
                   <div 
@@ -172,32 +203,17 @@ export default function AdminWeeklyCalendar() {
                         setSelectedCell({ memberId: member.id, date: dateStr });
                       }
                     }}
-                    className={`p-2 border-r border-outline-variant/5 last:border-0 flex flex-row gap-1.5 justify-center items-center transition-colors ${hasSchedules ? 'bg-primary/5 hover:bg-primary/10 cursor-pointer' : ''}`}
+                    className={`p-2 border-r border-slate-200/60 last:border-0 flex flex-row gap-1.5 justify-center items-center transition-colors ${hasSchedules ? 'bg-slate-50/30 cursor-pointer' : ''}`}
                   >
-                    {/* AM Block */}
-                    {amSchedules.length > 0 ? (
-                      <div className="flex-1 h-[32px] bg-primary text-white text-[11px] rounded-md text-center font-medium shadow-sm flex items-center justify-center gap-1">
-                        上午
-                        {amSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
-                      </div>
-                    ) : (
-                      <div className="flex-1 h-[32px] flex items-center justify-center bg-surface-container-low/30 text-outline-variant/40 text-[11px] rounded-md border border-dashed border-outline-variant/20">上午</div>
-                    )}
-                    
-                    {/* PM Block */}
-                    {pmSchedules.length > 0 ? (
-                      <div className="flex-1 h-[32px] bg-primary text-white text-[11px] rounded-md text-center font-medium shadow-sm flex items-center justify-center gap-1">
-                        下午
-                        {pmSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
-                      </div>
-                    ) : (
-                      <div className="flex-1 h-[32px] flex items-center justify-center bg-surface-container-low/30 text-outline-variant/40 text-[11px] rounded-md border border-dashed border-outline-variant/20">下午</div>
-                    )}
+                    {cellContent}
                   </div>
                 );
               })}
             </div>
           ))}
+          {members.length === 0 && (
+            <div className="p-12 text-center text-slate-400 font-medium">暂无队员数据</div>
+          )}
         </div>
       </div>
 
