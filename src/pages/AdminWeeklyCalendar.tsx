@@ -25,7 +25,7 @@ export default function AdminWeeklyCalendar() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ memberId: string, date: string } | null>(null);
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -110,24 +110,24 @@ export default function AdminWeeklyCalendar() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="flex-1 flex flex-col p-8 overflow-hidden">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-on-surface tracking-tight">
-          {year}年第{weekNum}周 <span className="text-lg font-medium text-on-surface-variant ml-2">({format(weekStart, 'MM/dd')} ~ {format(weekEnd, 'MM/dd')})</span>
+    <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-on-surface tracking-tight">
+          {year}年第{weekNum}周 <span className="text-base font-medium text-on-surface-variant ml-2">({format(weekStart, 'MM/dd')} ~ {format(weekEnd, 'MM/dd')})</span>
         </h2>
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button 
             onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg font-semibold transition-colors"
+            className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
           >
             <Download className="w-4 h-4" />
             导出表格
           </button>
-          <div className="flex gap-2">
-            <button onClick={prevWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
+          <div className="flex gap-1">
+            <button onClick={prevWeek} className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <button onClick={nextWeek} className="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
+            <button onClick={nextWeek} className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -136,13 +136,13 @@ export default function AdminWeeklyCalendar() {
 
       <div className="flex-1 bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/10 flex flex-col">
         {/* Header Row */}
-        <div className="grid grid-cols-[100px_repeat(7,minmax(0,1fr))] bg-surface-container-low text-on-surface-variant border-b border-outline-variant/5">
-          <div className="py-3 px-4 text-xs font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 flex items-center justify-center">
+        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-surface-container-low text-on-surface-variant border-b border-outline-variant/5">
+          <div className="py-2 px-2 text-[11px] font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 flex items-center justify-center">
             队员
           </div>
           {days.map(day => (
-            <div key={day.toString()} className="py-3 px-2 text-xs font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 last:border-0">
-              {format(day, 'E')} <span className="font-medium opacity-70 ml-1">{format(day, 'MM/dd')}</span>
+            <div key={day.toString()} className="py-2 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-outline-variant/5 last:border-0">
+              {format(day, 'E')} <span className="font-medium opacity-70 ml-0.5">{format(day, 'MM/dd')}</span>
             </div>
           ))}
         </div>
@@ -150,9 +150,9 @@ export default function AdminWeeklyCalendar() {
         {/* Grid Body */}
         <div className="flex-1 overflow-y-auto">
           {members.map(member => (
-            <div key={member.id} className="grid grid-cols-[100px_repeat(7,minmax(0,1fr))] border-b border-outline-variant/5 last:border-0 hover:bg-surface-container-lowest/50 transition-colors">
+            <div key={member.id} className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-outline-variant/5 last:border-0 hover:bg-surface-container-lowest/50 transition-colors">
               {/* Member Name Column */}
-              <div className="py-4 px-2 border-r border-outline-variant/5 flex items-center justify-center font-bold text-sm text-on-surface">
+              <div className="py-2 px-2 border-r border-outline-variant/5 flex items-center justify-center font-bold text-[13px] text-on-surface">
                 {member.name}
               </div>
               
@@ -162,45 +162,37 @@ export default function AdminWeeklyCalendar() {
                 const amSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'AM');
                 const pmSchedules = schedules.filter(s => s.memberId === member.id && s.date === dateStr && s.timeOfDay === 'PM');
 
+                const hasSchedules = amSchedules.length > 0 || pmSchedules.length > 0;
+
                 return (
-                  <div key={day.toString()} className="p-2 border-r border-outline-variant/5 last:border-0 flex flex-col gap-2">
+                  <div 
+                    key={day.toString()} 
+                    onClick={() => {
+                      if (hasSchedules) {
+                        setSelectedCell({ memberId: member.id, date: dateStr });
+                      }
+                    }}
+                    className={`p-1.5 border-r border-outline-variant/5 last:border-0 flex flex-col gap-1.5 justify-center transition-colors ${hasSchedules ? 'bg-primary/5 hover:bg-primary/10 cursor-pointer' : ''}`}
+                  >
                     {/* AM Block */}
-                    <div className={`flex-1 rounded-md p-2 text-xs transition-all flex flex-col gap-1 ${amSchedules.length > 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'bg-surface-container-low/30 text-outline-variant/50 border border-dashed border-outline-variant/20'}`}>
-                      <div className="font-bold mb-1 opacity-70 text-[10px] uppercase">上午</div>
-                      {amSchedules.length > 0 ? (
-                        amSchedules.map(schedule => (
-                          <div 
-                            key={schedule.id}
-                            onClick={() => setSelectedSchedule(schedule)}
-                            className="flex flex-col gap-1 cursor-pointer hover:opacity-80 bg-black/5 p-1.5 rounded"
-                          >
-                            <span className="line-clamp-2 leading-tight">{schedule.content}</span>
-                            {schedule.image && <ImageIcon className="w-3 h-3 opacity-70 mt-0.5" />}
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-[10px]">-</span>
-                      )}
-                    </div>
+                    {amSchedules.length > 0 ? (
+                      <div className="w-full bg-primary text-white text-[11px] py-1 rounded-sm text-center font-medium shadow-sm flex items-center justify-center gap-1">
+                        上午
+                        {amSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
+                      </div>
+                    ) : (
+                      <div className="w-full h-[22px] flex items-center justify-center bg-surface-container-low/20 text-outline-variant/30 text-[10px] rounded-sm border border-dashed border-outline-variant/20">-</div>
+                    )}
                     
                     {/* PM Block */}
-                    <div className={`flex-1 rounded-md p-2 text-xs transition-all flex flex-col gap-1 ${pmSchedules.length > 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'bg-surface-container-low/30 text-outline-variant/50 border border-dashed border-outline-variant/20'}`}>
-                      <div className="font-bold mb-1 opacity-70 text-[10px] uppercase">下午</div>
-                      {pmSchedules.length > 0 ? (
-                        pmSchedules.map(schedule => (
-                          <div 
-                            key={schedule.id}
-                            onClick={() => setSelectedSchedule(schedule)}
-                            className="flex flex-col gap-1 cursor-pointer hover:opacity-80 bg-black/5 p-1.5 rounded"
-                          >
-                            <span className="line-clamp-2 leading-tight">{schedule.content}</span>
-                            {schedule.image && <ImageIcon className="w-3 h-3 opacity-70 mt-0.5" />}
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-[10px]">-</span>
-                      )}
-                    </div>
+                    {pmSchedules.length > 0 ? (
+                      <div className="w-full bg-primary text-white text-[11px] py-1 rounded-sm text-center font-medium shadow-sm flex items-center justify-center gap-1">
+                        下午
+                        {pmSchedules.some(s => s.image) && <ImageIcon className="w-3 h-3 opacity-80" />}
+                      </div>
+                    ) : (
+                      <div className="w-full h-[22px] flex items-center justify-center bg-surface-container-low/20 text-outline-variant/30 text-[10px] rounded-sm border border-dashed border-outline-variant/20">-</div>
+                    )}
                   </div>
                 );
               })}
@@ -210,41 +202,76 @@ export default function AdminWeeklyCalendar() {
       </div>
 
       {/* Schedule Detail Modal */}
-      {selectedSchedule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedSchedule(null)}>
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
+      {selectedCell && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedCell(null)}>
+          <div className="bg-surface rounded-2xl w-full max-w-3xl shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-outline-variant/10">
               <h3 className="text-xl font-bold text-on-surface">
-                {members.find(m => m.id === selectedSchedule.memberId)?.name} 的行程
+                {members.find(m => m.id === selectedCell.memberId)?.name} 的本周行程
               </h3>
-              <button onClick={() => setSelectedSchedule(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+              <button onClick={() => setSelectedCell(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">时间</div>
-                <div className="text-on-surface font-medium">
-                  {selectedSchedule.date} {selectedSchedule.timeOfDay === 'AM' ? '上午' : '下午'}
-                </div>
+            <div className="flex flex-1 overflow-hidden min-h-[400px]">
+              {/* Sidebar Tabs for Days */}
+              <div className="w-1/3 border-r border-outline-variant/10 bg-surface-container-lowest overflow-y-auto p-4 space-y-2">
+                {days.map(day => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
+                  const daySchedules = schedules.filter(s => s.memberId === selectedCell.memberId && s.date === dateStr);
+                  const hasData = daySchedules.length > 0;
+                  
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => setSelectedCell({ ...selectedCell, date: dateStr })}
+                      className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-between ${
+                        selectedCell.date === dateStr 
+                          ? 'bg-primary text-white shadow-md' 
+                          : 'text-on-surface-variant hover:bg-surface-container-high'
+                      }`}
+                    >
+                      <span>{format(day, 'MM/dd')} ({format(day, 'E')})</span>
+                      {hasData && (
+                        <div className={`w-2 h-2 rounded-full ${selectedCell.date === dateStr ? 'bg-white' : 'bg-primary'}`} />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
               
-              <div>
-                <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">提报内容</div>
-                <div className="text-on-surface whitespace-pre-wrap bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
-                  {selectedSchedule.content}
+              {/* Content Area */}
+              <div className="w-2/3 p-6 overflow-y-auto bg-surface">
+                <div className="space-y-8">
+                  {['AM', 'PM'].map(timeOfDay => {
+                    const timeSchedules = schedules.filter(s => s.date === selectedCell.date && s.memberId === selectedCell.memberId && s.timeOfDay === timeOfDay);
+                    return (
+                      <div key={timeOfDay} className="space-y-4">
+                        <div className="text-sm font-bold text-primary uppercase tracking-wider border-b border-outline-variant/10 pb-2">
+                          {timeOfDay === 'AM' ? '上午' : '下午'}
+                        </div>
+                        {timeSchedules.length > 0 ? (
+                          timeSchedules.map(schedule => (
+                            <div key={schedule.id} className="space-y-3">
+                              <div className="text-on-surface whitespace-pre-wrap bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 text-sm">
+                                {schedule.content}
+                              </div>
+                              {schedule.image && (
+                                <div className="rounded-xl overflow-hidden border border-outline-variant/20">
+                                  <img src={schedule.image} alt="行程附件" className="w-full h-auto max-h-64 object-contain bg-surface-container-lowest" />
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-on-surface-variant/50 italic py-2">无行程安排</div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {selectedSchedule.image && (
-                <div>
-                  <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">附件图片</div>
-                  <div className="rounded-lg overflow-hidden border border-outline-variant/20">
-                    <img src={selectedSchedule.image} alt="行程附件" className="w-full h-auto max-h-64 object-contain bg-surface-container-lowest" />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
