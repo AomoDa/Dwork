@@ -69,8 +69,7 @@ async function initDb() {
     const membersRes = await db.execute('SELECT count(*) as count FROM members');
     if (membersRes.rows[0].count === 0) {
       const initialMembers = [
-        '姜银凤', '楼丽', '蒋青海', '姚晓晓', '赵威威', '王莉', '陈建康',
-        '毛春楼', '谢忠帐', '方明', '姚义蒙', '董益斌', '封令伟', '宋斌'
+        'Test1','Test2'
       ];
 
       for (const name of initialMembers) {

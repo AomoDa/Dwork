@@ -110,7 +110,10 @@ export default function AdminCalendar() {
         <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto">
           {days.map((day, i) => {
             const dateStr = format(day, 'yyyy-MM-dd');
-            const daySchedules = schedules.filter(s => s.date === dateStr && (!selectedMemberId || s.memberId === selectedMemberId));
+            const daySchedules = schedules.filter(s => {
+              const memberExists = members.some(m => m.id === s.memberId);
+              return memberExists && s.date === dateStr && (!selectedMemberId || s.memberId === selectedMemberId);
+            });
             const isCurrentMonth = isSameMonth(day, monthStart);
 
             // Group by memberId
