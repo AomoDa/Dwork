@@ -18,7 +18,7 @@ export default function AdminMembers() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMember, setNewMember] = useState({ name: '' });
   const [toastMessage, setToastMessage] = useState('');
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [qrCodeData, setQrCodeData] = useState<{url: string, name: string} | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -109,9 +109,9 @@ export default function AdminMembers() {
     textArea.remove();
   };
 
-  const showQrCode = (path: string) => {
+  const showQrCode = (path: string, name: string) => {
     const url = `${window.location.origin}/m/${path}`;
-    setQrCodeUrl(url);
+    setQrCodeData({ url, name });
   };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -155,7 +155,7 @@ export default function AdminMembers() {
                   {!isDeleted && (
                     <>
                       <button 
-                        onClick={() => showQrCode(member.path)}
+                        onClick={() => showQrCode(member.path, member.name)}
                         className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-fixed/30 hover:bg-primary-fixed/50 px-3 py-1.5 rounded-lg transition-colors"
                       >
                         <QrCode className="w-4 h-4" /> 二维码
@@ -232,19 +232,19 @@ export default function AdminMembers() {
       )}
 
       {/* QR Code Modal */}
-      {qrCodeUrl && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-on-surface/30 backdrop-blur-sm" onClick={() => setQrCodeUrl(null)}>
+      {qrCodeData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-on-surface/30 backdrop-blur-sm" onClick={() => setQrCodeData(null)}>
           <div className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-surface-container-high p-6 text-center" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-on-surface">成员专属二维码</h3>
-              <button onClick={() => setQrCodeUrl(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+              <h3 className="text-xl font-bold text-on-surface">{qrCodeData.name} : 行事历</h3>
+              <button onClick={() => setQrCodeData(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
             <div className="flex justify-center bg-white p-4 rounded-xl mb-4">
-              <QRCodeSVG value={qrCodeUrl} size={200} />
+              <QRCodeSVG value={qrCodeData.url} size={200} />
             </div>
-            <p className="text-xs text-on-surface-variant break-all">{qrCodeUrl}</p>
+            <p className="text-sm font-medium text-on-surface-variant">使用微信扫码填报</p>
           </div>
         </div>
       )}
