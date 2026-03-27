@@ -32,7 +32,6 @@ export default function Member() {
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [timeOfDay, setTimeOfDay] = useState<'AM' | 'PM'>('AM');
-  const [content, setContent] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
@@ -93,7 +92,6 @@ export default function Member() {
       return; // Do nothing if date is not editable
     }
     setSelectedDate(date);
-    setContent('');
     setTimeOfDay('AM');
     setImage(null);
     setShowModal(true);
@@ -124,8 +122,8 @@ export default function Member() {
       setFormError('未到的日期不可编辑');
       return;
     }
-    if (!content.trim()) {
-      setFormError('请输入事项详情');
+    if (!image) {
+      setFormError('请上传行程图片');
       return;
     }
     setFormError('');
@@ -137,7 +135,7 @@ export default function Member() {
         body: JSON.stringify({
           date: format(selectedDate, 'yyyy-MM-dd'),
           timeOfDay,
-          content,
+          content: '行程打卡',
           image
         })
       });
@@ -145,7 +143,6 @@ export default function Member() {
       const newSchedule = await res.json();
       setSchedules([...schedules, newSchedule]);
       setShowModal(false);
-      setContent('');
       setImage(null);
     } catch (err: any) {
       setFormError(err.message);
@@ -293,22 +290,9 @@ export default function Member() {
               </div>
             </div>
 
-            {/* Text Input */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">事项详情</label>
-              <textarea 
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                disabled={!isSelectedDateEditable}
-                className={`w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all placeholder:text-outline outline-none resize-none ${!isSelectedDateEditable ? 'opacity-50 cursor-not-allowed' : ''}`} 
-                placeholder={isSelectedDateEditable ? "请输入具体的工作内容或会议安排..." : "未到的日期不可编辑"} 
-                rows={4}
-              />
-            </div>
-
             {/* Attachment Upload */}
             <div className="space-y-2">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">附件图片</label>
+              <label className="text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">附件图片 <span className="text-error">*</span></label>
               <div className="flex gap-3">
                 <label className={`w-20 h-20 rounded-lg bg-surface-container-highest border-2 border-dashed border-outline-variant/30 flex flex-col items-center justify-center transition-colors ${isSelectedDateEditable ? 'cursor-pointer hover:bg-surface-container-high' : 'opacity-50 cursor-not-allowed'}`}>
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={!isSelectedDateEditable} />
@@ -503,17 +487,7 @@ export default function Member() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">行程内容</label>
-                  <textarea 
-                    value={content}
-                    onChange={e => setContent(e.target.value)}
-                    className="w-full bg-surface-container-highest border-none rounded-xl text-sm p-4 focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all placeholder:text-outline-variant resize-none outline-none" 
-                    placeholder="请输入具体的工作内容或行程安排..." 
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">图片附件 (可选)</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">图片附件 <span className="text-error">*</span></label>
                   <div className="flex gap-3">
                     <label className="border-2 border-dashed border-outline-variant rounded-2xl p-6 flex flex-col items-center justify-center group hover:border-primary hover:bg-primary-fixed/5 transition-all cursor-pointer w-full">
                       <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
