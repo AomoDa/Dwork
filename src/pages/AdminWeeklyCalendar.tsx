@@ -28,7 +28,8 @@ export default function AdminWeeklyCalendar() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
-    return now.getTime() < CUTOFF_DATE.getTime() ? CUTOFF_DATE : now;
+    const nextWeek = addWeeks(now, 1);
+    return nextWeek.getTime() < CUTOFF_DATE.getTime() ? CUTOFF_DATE : nextWeek;
   });
   const [loading, setLoading] = useState(true);
   const [enlargedImage, setEnlargedImage] = useState<{ memberId: string, dateStr: string } | null>(null);
@@ -93,14 +94,14 @@ export default function AdminWeeklyCalendar() {
     }).filter(w => w.start.getTime() >= CUTOFF_DATE.getTime());
   }, [currentDate]);
 
-  const canGoPrev = weeks.length > 0 && weeks[0].start.getTime() > CUTOFF_DATE.getTime();
+  const canGoPrev = weeks.length > 0 && format(weeks[0].start, 'yyyy-MM-dd') > format(CUTOFF_DATE, 'yyyy-MM-dd');
   const maxAllowedDate = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
-  const canGoNext = weeks.length > 0 && weeks[weeks.length - 1].start.getTime() < maxAllowedDate.getTime();
+  const canGoNext = weeks.length > 0 && format(weeks[weeks.length - 1].start, 'yyyy-MM-dd') < format(maxAllowedDate, 'yyyy-MM-dd');
 
   const nextWeek = () => {
     if (canGoNext) {
       const nextDate = addWeeks(currentDate, 5);
-      setCurrentDate(nextDate.getTime() > maxAllowedDate.getTime() ? maxAllowedDate : nextDate);
+      setCurrentDate(format(nextDate, 'yyyy-MM-dd') > format(maxAllowedDate, 'yyyy-MM-dd') ? maxAllowedDate : nextDate);
     }
   };
   const prevWeek = () => {
@@ -112,7 +113,9 @@ export default function AdminWeeklyCalendar() {
   const scheduleMap = useMemo(() => {
     const map = new Map<string, Schedule>();
     schedules.forEach(s => {
-      const weekStartStr = format(startOfWeek(new Date(s.date), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      const [y, m, d] = s.date.split('-').map(Number);
+      const localDate = new Date(y, m - 1, d);
+      const weekStartStr = format(startOfWeek(localDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       const key = `${s.memberId}-${weekStartStr}`;
       if (s.image || !map.has(key)) {
         map.set(key, s);
@@ -275,7 +278,8 @@ export default function AdminWeeklyCalendar() {
         const schedule = scheduleMap.get(`${enlargedImage.memberId}-${enlargedImage.dateStr}`);
 
         const member = members.find(m => m.id === enlargedImage.memberId);
-        const d = new Date(enlargedImage.dateStr);
+        const [y, m, day] = enlargedImage.dateStr.split('-').map(Number);
+        const d = new Date(y, m - 1, day);
         const end = endOfWeek(d, { weekStartsOn: 1 });
         const periodText = `${format(d, 'yy')}年第${getISOWeek(d)}周 (${format(d, 'MM.dd')}-${format(end, 'MM.dd')})`;
 
@@ -285,11 +289,11 @@ export default function AdminWeeklyCalendar() {
         const canNavDown = currentMemberIdx < members.length - 1;
 
         const tempDLeft = subWeeks(d, 1);
-        const canNavLeft = tempDLeft.getTime() >= CUTOFF_DATE.getTime();
+        const canNavLeft = format(tempDLeft, 'yyyy-MM-dd') >= format(CUTOFF_DATE, 'yyyy-MM-dd');
 
         const tempDRight = addWeeks(d, 1);
         const maxAllowed = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
-        const canNavRight = tempDRight.getTime() <= maxAllowed.getTime();
+        const canNavRight = format(tempDRight, 'yyyy-MM-dd') <= format(maxAllowed, 'yyyy-MM-dd');
 
         const navigate = (direction: 'up' | 'down' | 'left' | 'right', e: React.MouseEvent) => {
           e.stopPropagation();
