@@ -18,7 +18,7 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="weekly" replace />} />
           <Route path="members" element={<AdminMembers />} />
-          <Route path="calendar" element={<Navigate to="weekly" replace />} />
+          <Route path="calendar" element={<AdminWeeklyCalendar />} />
           <Route path="weekly" element={<AdminWeeklyCalendar />} />
         </Route>
         <Route path="/m/:path" element={<Member />} />
