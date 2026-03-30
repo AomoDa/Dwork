@@ -236,7 +236,7 @@ export default function AdminMembers() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-on-surface/30 backdrop-blur-sm" onClick={() => setQrCodeData(null)}>
           <div className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-surface-container-high p-6 text-center" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-on-surface">{qrCodeData.name} : 行事历</h3>
+              <h3 className="text-xl font-bold text-on-surface">{qrCodeData.name}行事历专属二维码</h3>
               <button onClick={() => setQrCodeData(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
