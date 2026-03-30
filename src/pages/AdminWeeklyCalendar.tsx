@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, getISOWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, getISOWeek, getISOWeekYear } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Download, Loader2 } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -20,17 +20,21 @@ interface Member {
   name: string;
 }
 
+const CUTOFF_DATE = new Date('2026-03-23T00:00:00');
+
 export default function AdminWeeklyCalendar() {
   const { token } = useOutletContext<{ token: string }>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return now.getTime() < CUTOFF_DATE.getTime() ? CUTOFF_DATE : now;
+  });
   const [loading, setLoading] = useState(true);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportWeek, setExportWeek] = useState(`${format(new Date(), 'yyyy')}-W${getISOWeek(new Date()).toString().padStart(2, '0')}`);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -47,6 +51,34 @@ export default function AdminWeeklyCalendar() {
     });
   }, [token]);
 
+  // Generate available weeks for export dropdown (from cutoff date to next week)
+  const availableExportWeeks = useMemo(() => {
+    const weeksList = [];
+    const today = new Date();
+    const endLimit = addWeeks(startOfWeek(today, { weekStartsOn: 1 }), 1);
+    let current = startOfWeek(CUTOFF_DATE, { weekStartsOn: 1 });
+    
+    while (current.getTime() <= endLimit.getTime()) {
+      const end = endOfWeek(current, { weekStartsOn: 1 });
+      const year = getISOWeekYear(current).toString();
+      const isoWeek = getISOWeek(current).toString().padStart(2, '0');
+      weeksList.push({
+        value: `${year}-W${isoWeek}`,
+        label: `${format(current, 'yy')}年第${getISOWeek(current)}周 ${format(current, 'MM.dd')}-${format(end, 'MM.dd')}`,
+        start: current
+      });
+      current = addWeeks(current, 1);
+    }
+    return weeksList.reverse(); // Newest first
+  }, []);
+
+  const [exportWeek, setExportWeek] = useState(() => {
+    const now = new Date();
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const targetDate = currentWeekStart.getTime() < CUTOFF_DATE.getTime() ? CUTOFF_DATE : now;
+    return `${getISOWeekYear(targetDate)}-W${getISOWeek(targetDate).toString().padStart(2, '0')}`;
+  });
+
   const weeks = useMemo(() => {
     return Array.from({ length: 5 }).map((_, i) => {
       const start = subWeeks(startOfWeek(currentDate, { weekStartsOn: 1 }), 4 - i);
@@ -58,11 +90,24 @@ export default function AdminWeeklyCalendar() {
         label: `${format(start, 'yy')}年第${getISOWeek(start)}周`,
         subLabel: `${format(start, 'MM.dd')}-${format(end, 'MM.dd')}`
       };
-    });
+    }).filter(w => w.start.getTime() >= CUTOFF_DATE.getTime());
   }, [currentDate]);
 
-  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 5));
-  const prevWeek = () => setCurrentDate(subWeeks(currentDate, 5));
+  const canGoPrev = weeks.length > 0 && weeks[0].start.getTime() > CUTOFF_DATE.getTime();
+  const maxAllowedDate = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
+  const canGoNext = weeks.length > 0 && weeks[weeks.length - 1].start.getTime() < maxAllowedDate.getTime();
+
+  const nextWeek = () => {
+    if (canGoNext) {
+      const nextDate = addWeeks(currentDate, 5);
+      setCurrentDate(nextDate.getTime() > maxAllowedDate.getTime() ? maxAllowedDate : nextDate);
+    }
+  };
+  const prevWeek = () => {
+    if (canGoPrev) {
+      setCurrentDate(subWeeks(currentDate, 5));
+    }
+  };
 
   const scheduleMap = useMemo(() => {
     const map = new Map<string, Schedule>();
@@ -132,7 +177,9 @@ export default function AdminWeeklyCalendar() {
         <div className="flex items-center gap-6">
           <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-baseline gap-2">
             行程概览
-            <span className="text-sm font-medium text-slate-500 tracking-wide">({weeks[0].label} ~ {weeks[4].label})</span>
+            {weeks.length > 0 && (
+              <span className="text-sm font-medium text-slate-500 tracking-wide">({weeks[0].label} ~ {weeks[weeks.length - 1].label})</span>
+            )}
           </h2>
         </div>
 
@@ -145,10 +192,18 @@ export default function AdminWeeklyCalendar() {
             导出表格
           </button>
           <div className="flex gap-1">
-            <button onClick={prevWeek} className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors">
+            <button 
+              onClick={prevWeek} 
+              disabled={!canGoPrev}
+              className={`p-1.5 rounded-lg transition-colors ${canGoPrev ? 'hover:bg-surface-container-high' : 'opacity-30 cursor-not-allowed'}`}
+            >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <button onClick={nextWeek} className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors">
+            <button 
+              onClick={nextWeek} 
+              disabled={!canGoNext}
+              className={`p-1.5 rounded-lg transition-colors ${canGoNext ? 'hover:bg-surface-container-high' : 'opacity-30 cursor-not-allowed'}`}
+            >
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -157,7 +212,10 @@ export default function AdminWeeklyCalendar() {
 
       <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60 flex flex-col">
         {/* Header Row */}
-        <div className="grid grid-cols-[90px_repeat(5,minmax(0,1fr))] bg-slate-50/80 text-slate-500 border-b border-slate-200/60">
+        <div 
+          className="grid bg-slate-50/80 text-slate-500 border-b border-slate-200/60"
+          style={{ gridTemplateColumns: `90px repeat(${weeks.length}, minmax(0, 1fr))` }}
+        >
           <div className="py-3 px-2 text-[12px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center">
             队员
           </div>
@@ -172,7 +230,11 @@ export default function AdminWeeklyCalendar() {
         {/* Grid Body */}
         <div className="flex-1 overflow-y-auto">
           {members.map(member => (
-            <div key={member.id} className="grid grid-cols-[90px_repeat(5,minmax(0,1fr))] border-b-[4px] border-slate-50/80 last:border-0 hover:bg-slate-50/50 transition-colors group">
+            <div 
+              key={member.id} 
+              className="grid border-b-[4px] border-slate-50/80 last:border-0 hover:bg-slate-50/50 transition-colors group"
+              style={{ gridTemplateColumns: `90px repeat(${weeks.length}, minmax(0, 1fr))` }}
+            >
               {/* Member Name Column */}
               <div className="py-4 px-2 border-r border-slate-200/60 flex items-center justify-center font-bold text-[15px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors">
                 {member.name}
@@ -234,13 +296,18 @@ export default function AdminWeeklyCalendar() {
             <div className="space-y-4 mb-8">
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">选择导出周</label>
-                <input 
-                  type="week" 
+                <select 
                   value={exportWeek}
                   onChange={(e) => setExportWeek(e.target.value)}
                   disabled={isExporting}
-                  className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none disabled:opacity-50"
-                />
+                  className="w-full bg-surface-container-highest border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all outline-none disabled:opacity-50 appearance-none cursor-pointer"
+                >
+                  {availableExportWeeks.map(week => (
+                    <option key={week.value} value={week.value}>
+                      {week.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <p className="text-xs text-on-surface-variant">
                 将导出所选周的所有队员行程图片，打包为 ZIP 文件。图片将以队员姓名命名。
