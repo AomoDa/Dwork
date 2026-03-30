@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, getISOWeek, getISOWeekYear } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Download, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Download, Loader2 } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -31,7 +31,7 @@ export default function AdminWeeklyCalendar() {
     return now.getTime() < CUTOFF_DATE.getTime() ? CUTOFF_DATE : now;
   });
   const [loading, setLoading] = useState(true);
-  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  const [enlargedImage, setEnlargedImage] = useState<{ memberId: string, dateStr: string } | null>(null);
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -252,7 +252,7 @@ export default function AdminWeeklyCalendar() {
                     {schedule?.image ? (
                       <div 
                         className="w-16 h-16 rounded-lg overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-                        onClick={() => setEnlargedImage(schedule.image!)}
+                        onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
                       >
                         <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
                       </div>
@@ -271,16 +271,90 @@ export default function AdminWeeklyCalendar() {
       </div>
 
       {/* Enlarged Image Modal */}
-      {enlargedImage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setEnlargedImage(null)}>
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center">
-            <button className="absolute -top-12 right-0 text-white hover:text-slate-300 transition-colors" onClick={() => setEnlargedImage(null)}>
-              <X className="w-8 h-8" />
+      {enlargedImage && (() => {
+        const schedule = scheduleMap.get(`${enlargedImage.memberId}-${enlargedImage.dateStr}`);
+
+        const member = members.find(m => m.id === enlargedImage.memberId);
+        const d = new Date(enlargedImage.dateStr);
+        const end = endOfWeek(d, { weekStartsOn: 1 });
+        const periodText = `${format(d, 'yy')}年第${getISOWeek(d)}周 (${format(d, 'MM.dd')}-${format(end, 'MM.dd')})`;
+
+        const currentMemberIdx = members.findIndex(m => m.id === enlargedImage.memberId);
+
+        const canNavUp = currentMemberIdx > 0;
+        const canNavDown = currentMemberIdx < members.length - 1;
+
+        const tempDLeft = subWeeks(d, 1);
+        const canNavLeft = tempDLeft.getTime() >= CUTOFF_DATE.getTime();
+
+        const tempDRight = addWeeks(d, 1);
+        const maxAllowed = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
+        const canNavRight = tempDRight.getTime() <= maxAllowed.getTime();
+
+        const navigate = (direction: 'up' | 'down' | 'left' | 'right', e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (direction === 'up' && canNavUp) {
+            setEnlargedImage({ memberId: members[currentMemberIdx - 1].id, dateStr: enlargedImage.dateStr });
+          } else if (direction === 'down' && canNavDown) {
+            setEnlargedImage({ memberId: members[currentMemberIdx + 1].id, dateStr: enlargedImage.dateStr });
+          } else if (direction === 'left' && canNavLeft) {
+            setEnlargedImage({ memberId: enlargedImage.memberId, dateStr: format(tempDLeft, 'yyyy-MM-dd') });
+          } else if (direction === 'right' && canNavRight) {
+            setEnlargedImage({ memberId: enlargedImage.memberId, dateStr: format(tempDRight, 'yyyy-MM-dd') });
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={() => setEnlargedImage(null)}>
+            {/* Header Info */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center text-white z-10" onClick={e => e.stopPropagation()}>
+              <div className="text-xl font-bold tracking-wider mb-1">{member?.name}</div>
+              <div className="text-sm text-white/70 bg-white/10 px-3 py-1 rounded-full">{periodText}</div>
+            </div>
+
+            {/* Close Button */}
+            <button className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors z-10" onClick={(e) => { e.stopPropagation(); setEnlargedImage(null); }}>
+              <X className="w-6 h-6" />
             </button>
-            <img src={enlargedImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" alt="放大图片" />
+
+            {/* Navigation Arrows */}
+            {canNavUp && (
+              <button onClick={(e) => navigate('up', e)} className="absolute top-24 left-1/2 -translate-x-1/2 text-white bg-white/20 hover:bg-white/40 p-4 rounded-full transition-all z-10 group border border-white/30 shadow-xl backdrop-blur-md">
+                <ChevronUp className="w-8 h-8" />
+                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 text-[12px] font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-3 py-1.5 rounded-md text-white">上一队员</span>
+              </button>
+            )}
+            {canNavDown && (
+              <button onClick={(e) => navigate('down', e)} className="absolute bottom-12 left-1/2 -translate-x-1/2 text-white bg-white/20 hover:bg-white/40 p-4 rounded-full transition-all z-10 group border border-white/30 shadow-xl backdrop-blur-md">
+                <ChevronDown className="w-8 h-8" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 text-[12px] font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-3 py-1.5 rounded-md text-white">下一队员</span>
+              </button>
+            )}
+            {canNavLeft && (
+              <button onClick={(e) => navigate('left', e)} className="absolute left-8 top-1/2 -translate-y-1/2 text-white bg-white/20 hover:bg-white/40 p-4 rounded-full transition-all z-10 group border border-white/30 shadow-xl backdrop-blur-md">
+                <ChevronLeft className="w-8 h-8" />
+                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 text-[12px] font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-3 py-1.5 rounded-md text-white">上一周</span>
+              </button>
+            )}
+            {canNavRight && (
+              <button onClick={(e) => navigate('right', e)} className="absolute right-8 top-1/2 -translate-y-1/2 text-white bg-white/20 hover:bg-white/40 p-4 rounded-full transition-all z-10 group border border-white/30 shadow-xl backdrop-blur-md">
+                <ChevronRight className="w-8 h-8" />
+                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 text-[12px] font-medium opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black/80 px-3 py-1.5 rounded-md text-white">下一周</span>
+              </button>
+            )}
+
+            <div className="relative max-w-[85vw] max-h-[75vh] w-full h-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
+              {schedule?.image ? (
+                <img src={schedule.image} className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl" alt="放大图片" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-white/50 bg-white/5 rounded-2xl w-full max-w-md aspect-video border border-white/10 shadow-2xl">
+                  <span className="text-2xl font-medium tracking-widest">无图片</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Export Modal */}
       {showExportModal && (
