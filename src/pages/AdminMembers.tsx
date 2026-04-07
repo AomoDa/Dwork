@@ -118,12 +118,12 @@ export default function AdminMembers() {
   if (error) return <div className="p-8 text-center text-error font-bold">{error}</div>;
 
   return (
-    <div className="p-8 overflow-y-auto flex-1">
-      <div className="flex justify-between items-end mb-8">
-        <div className="flex gap-3">
+    <div className="p-4 md:p-8 overflow-y-auto flex-1">
+      <div className="flex justify-between items-end mb-4 md:mb-8">
+        <div className="flex gap-3 w-full md:w-auto">
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-2 rounded-lg font-semibold shadow-lg shadow-primary/10 active:scale-95 transition-transform"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 md:py-2 rounded-lg font-semibold shadow-lg shadow-primary/10 active:scale-95 transition-transform"
           >
             <UserPlus className="w-4 h-4" />
             添加新成员
@@ -133,7 +133,7 @@ export default function AdminMembers() {
 
       {/* Table */}
       <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container-high">
-        <div className="grid grid-cols-12 bg-surface-container-low px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
+        <div className="hidden md:grid grid-cols-12 bg-surface-container-low px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
           <div className="col-span-6">成员信息</div>
           <div className="col-span-6 text-right">操作</div>
         </div>
@@ -141,17 +141,17 @@ export default function AdminMembers() {
           {members.map(member => {
             const isDeleted = member.isDeleted === 1;
             return (
-              <div key={member.id} className={`grid grid-cols-12 px-6 py-5 items-center hover:bg-surface-container-low transition-colors group ${isDeleted ? 'opacity-60 grayscale' : ''}`}>
-                <div className="col-span-6 flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${isDeleted ? 'bg-surface-container-high text-on-surface-variant' : 'bg-surface-container-high text-primary'}`}>
+              <div key={member.id} className={`flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-0 px-4 md:px-6 py-4 md:py-5 items-start md:items-center hover:bg-surface-container-low transition-colors group ${isDeleted ? 'opacity-60 grayscale' : ''}`}>
+                <div className="col-span-6 flex items-center gap-3 md:gap-4 w-full">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg shrink-0 ${isDeleted ? 'bg-surface-container-high text-on-surface-variant' : 'bg-surface-container-high text-primary'}`}>
                     {member.name.charAt(0)}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <h3 className={`font-bold ${isDeleted ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{member.name}</h3>
                     {isDeleted && <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full font-bold">已删除</span>}
                   </div>
                 </div>
-                <div className="col-span-6 flex justify-end gap-2">
+                <div className="col-span-6 flex flex-wrap md:flex-nowrap justify-start md:justify-end gap-2 w-full md:w-auto pl-14 md:pl-0">
                   {!isDeleted && (
                     <>
                       <button 

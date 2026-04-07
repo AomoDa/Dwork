@@ -9,9 +9,9 @@ export default function AdminLayout() {
   if (!token) return <div className="p-8 text-center text-error font-bold">ERROR:无权限</div>;
 
   return (
-    <div className="flex h-screen bg-surface text-on-surface">
-      {/* Sidebar */}
-      <aside className="w-64 bg-inverse-surface flex flex-col py-8 shadow-xl z-50">
+    <div className="flex flex-col md:flex-row h-screen bg-surface text-on-surface">
+      {/* Sidebar (Desktop) */}
+      <aside className="hidden md:flex w-64 bg-inverse-surface flex-col py-8 shadow-xl z-50">
         <div className="px-6 mb-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
@@ -42,10 +42,35 @@ export default function AdminLayout() {
         </div>
       </aside>
 
+      {/* Top Header (Mobile) */}
+      <header className="md:hidden bg-inverse-surface text-white p-4 flex items-center justify-between shadow-md z-50">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center">
+            <Users className="text-white w-5 h-5" />
+          </div>
+          <h2 className="font-black text-lg tracking-tight">管理控制台</h2>
+        </div>
+        <button className="text-slate-400 hover:text-white transition-colors">
+          <LogOut className="w-5 h-5" />
+        </button>
+      </header>
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative pb-16 md:pb-0">
         <Outlet context={{ token }} />
       </main>
+
+      {/* Bottom Navigation (Mobile) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-inverse-surface flex shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-50 pb-[env(safe-area-inset-bottom)]">
+        <Link to={`/admin/weekly?token=${token}`} className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${location.pathname.includes('weekly') ? 'text-blue-400' : 'text-slate-400'}`}>
+          <CalendarDays className="w-5 h-5" />
+          <span className="text-[10px] font-medium">周历日程</span>
+        </Link>
+        <Link to={`/admin/members?token=${token}`} className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${location.pathname.includes('members') ? 'text-blue-400' : 'text-slate-400'}`}>
+          <Users className="w-5 h-5" />
+          <span className="text-[10px] font-medium">成员管理</span>
+        </Link>
+      </nav>
     </div>
   );
 }

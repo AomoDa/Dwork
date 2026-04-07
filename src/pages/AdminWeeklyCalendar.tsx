@@ -176,7 +176,7 @@ export default function AdminWeeklyCalendar() {
 
   return (
     <div className="flex-1 flex flex-col p-2 md:p-4 overflow-hidden">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-baseline gap-2">
             行程概览
@@ -186,7 +186,7 @@ export default function AdminWeeklyCalendar() {
           </h2>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
           <button 
             onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 bg-surface-container-high text-on-surface-variant hover:text-primary px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
@@ -214,63 +214,65 @@ export default function AdminWeeklyCalendar() {
       </div>
 
       <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60 flex flex-col">
-        {/* Header Row */}
-        <div className="grid bg-slate-50/80 text-slate-500 border-b border-slate-200/60"
-          style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(0, 1fr))` }}
-        >
-          <div className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center">
-            队员
-          </div>
-          {weeks.map(week => (
-            <div key={week.dateStr} className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 last:border-0 flex flex-col items-center justify-center">
-              <span>{week.label}</span>
-              <span className="font-medium opacity-70">{week.subLabel}</span>
+        <div className="flex-1 overflow-x-auto overflow-y-hidden flex flex-col">
+          {/* Header Row */}
+          <div className="grid bg-slate-50/80 text-slate-500 border-b border-slate-200/60 min-w-max"
+            style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(60px, 1fr))` }}
+          >
+            <div className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center sticky left-0 bg-slate-50/95 backdrop-blur z-10">
+              队员
             </div>
-          ))}
-        </div>
-
-        {/* Grid Body */}
-        <div className="flex-1 overflow-y-auto">
-          {members.map(member => (
-            <div 
-              key={member.id} 
-              className="grid border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors group"
-              style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(0, 1fr))` }}
-            >
-              {/* Member Name Column */}
-              <div className="py-1 px-1 border-r border-slate-200/60 flex items-center justify-center font-bold text-[13px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors">
-                {member.name}
+            {weeks.map(week => (
+              <div key={week.dateStr} className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 last:border-0 flex flex-col items-center justify-center">
+                <span>{week.label}</span>
+                <span className="font-medium opacity-70">{week.subLabel}</span>
               </div>
-              
-              {/* Weeks Columns */}
-              {weeks.map(week => {
-                const schedule = scheduleMap.get(`${member.id}-${week.dateStr}`);
-                const isPastOrCurrentWeek = format(week.start, 'yyyy-MM-dd') <= format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-                const isMissing = !schedule?.image && isPastOrCurrentWeek;
+            ))}
+          </div>
 
-                return (
-                  <div 
-                    key={week.dateStr} 
-                    className={`p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors ${isMissing ? 'bg-yellow-100/80' : ''}`}
-                  >
-                    {schedule?.image ? (
-                      <div 
-                        className="w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-                        onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
-                      >
-                        <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
-                      </div>
-                    ) : (
-                      <span className={`text-[10px] ${isMissing ? 'text-yellow-600/50 font-medium' : 'text-slate-300'}`}>-</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          {members.length === 0 && (
-            <div className="p-12 text-center text-slate-400 font-medium">暂无队员数据</div>
-          )}
+          {/* Grid Body */}
+          <div className="flex-1 overflow-y-auto min-w-max">
+            {members.map(member => (
+              <div 
+                key={member.id} 
+                className="grid border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors group"
+                style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(60px, 1fr))` }}
+              >
+                {/* Member Name Column */}
+                <div className="py-1 px-1 border-r border-slate-200/60 flex items-center justify-center font-bold text-[13px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors sticky left-0 z-10">
+                  {member.name}
+                </div>
+                
+                {/* Weeks Columns */}
+                {weeks.map(week => {
+                  const schedule = scheduleMap.get(`${member.id}-${week.dateStr}`);
+                  const isPastOrCurrentWeek = format(week.start, 'yyyy-MM-dd') <= format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                  const isMissing = !schedule?.image && isPastOrCurrentWeek;
+
+                  return (
+                    <div 
+                      key={week.dateStr} 
+                      className={`p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors ${isMissing ? 'bg-yellow-100/80' : ''}`}
+                    >
+                      {schedule?.image ? (
+                        <div 
+                          className="w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                          onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
+                        >
+                          <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
+                        </div>
+                      ) : (
+                        <span className={`text-[10px] ${isMissing ? 'text-yellow-600/50 font-medium' : 'text-slate-300'}`}>-</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {members.length === 0 && (
+              <div className="p-12 text-center text-slate-400 font-medium">暂无队员数据</div>
+            )}
+          </div>
         </div>
       </div>
 
