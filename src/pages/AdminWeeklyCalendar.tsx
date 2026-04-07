@@ -20,7 +20,7 @@ interface Member {
   name: string;
 }
 
-const CUTOFF_DATE = new Date('2026-03-23T00:00:00');
+const CUTOFF_DATE = new Date('2026-03-30T00:00:00');
 
 export default function AdminWeeklyCalendar() {
   const { token } = useOutletContext<{ token: string }>();
@@ -245,11 +245,13 @@ export default function AdminWeeklyCalendar() {
               {/* Weeks Columns */}
               {weeks.map(week => {
                 const schedule = scheduleMap.get(`${member.id}-${week.dateStr}`);
+                const isPastOrCurrentWeek = format(week.start, 'yyyy-MM-dd') <= format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                const isMissing = !schedule?.image && isPastOrCurrentWeek;
 
                 return (
                   <div 
                     key={week.dateStr} 
-                    className="p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors"
+                    className={`p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors ${isMissing ? 'bg-yellow-100/80' : ''}`}
                   >
                     {schedule?.image ? (
                       <div 
@@ -259,7 +261,7 @@ export default function AdminWeeklyCalendar() {
                         <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-300">-</span>
+                      <span className={`text-[10px] ${isMissing ? 'text-yellow-600/50 font-medium' : 'text-slate-300'}`}>-</span>
                     )}
                   </div>
                 );

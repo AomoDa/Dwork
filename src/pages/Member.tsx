@@ -21,7 +21,7 @@ interface Schedule {
   image?: string;
 }
 
-const CUTOFF_DATE = new Date('2026-03-23T00:00:00');
+const CUTOFF_DATE = new Date('2026-03-30T00:00:00');
 
 export default function Member() {
   const { path } = useParams();
@@ -34,7 +34,7 @@ export default function Member() {
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
     const now = new Date();
     const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const cutoffWeekStart = startOfWeek(new Date('2026-03-23T00:00:00'), { weekStartsOn: 1 });
+    const cutoffWeekStart = startOfWeek(new Date('2026-03-30T00:00:00'), { weekStartsOn: 1 });
     return currentWeekStart.getTime() < cutoffWeekStart.getTime() ? cutoffWeekStart : currentWeekStart;
   });
   const [image, setImage] = useState<string | null>(null);
