@@ -175,13 +175,13 @@ export default function AdminWeeklyCalendar() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-6">
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-baseline gap-2">
+    <div className="flex-1 flex flex-col p-2 md:p-4 overflow-hidden">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-baseline gap-2">
             行程概览
             {weeks.length > 0 && (
-              <span className="text-sm font-medium text-slate-500 tracking-wide">({weeks[0].label} ~ {weeks[weeks.length - 1].label})</span>
+              <span className="text-xs font-medium text-slate-500 tracking-wide">({weeks[0].label} ~ {weeks[weeks.length - 1].label})</span>
             )}
           </h2>
         </div>
@@ -215,17 +215,16 @@ export default function AdminWeeklyCalendar() {
 
       <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60 flex flex-col">
         {/* Header Row */}
-        <div 
-          className="grid bg-slate-50/80 text-slate-500 border-b border-slate-200/60"
-          style={{ gridTemplateColumns: `90px repeat(${weeks.length}, minmax(0, 1fr))` }}
+        <div className="grid bg-slate-50/80 text-slate-500 border-b border-slate-200/60"
+          style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(0, 1fr))` }}
         >
-          <div className="py-3 px-2 text-[12px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center">
+          <div className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 flex items-center justify-center">
             队员
           </div>
           {weeks.map(week => (
-            <div key={week.dateStr} className="py-3 px-1 text-[12px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 last:border-0 flex flex-col items-center justify-center">
+            <div key={week.dateStr} className="py-1.5 px-1 text-[11px] font-bold tracking-widest uppercase text-center border-r border-slate-200/60 last:border-0 flex flex-col items-center justify-center">
               <span>{week.label}</span>
-              <span className="font-medium opacity-70 mt-0.5">{week.subLabel}</span>
+              <span className="font-medium opacity-70">{week.subLabel}</span>
             </div>
           ))}
         </div>
@@ -235,11 +234,11 @@ export default function AdminWeeklyCalendar() {
           {members.map(member => (
             <div 
               key={member.id} 
-              className="grid border-b-[4px] border-slate-50/80 last:border-0 hover:bg-slate-50/50 transition-colors group"
-              style={{ gridTemplateColumns: `90px repeat(${weeks.length}, minmax(0, 1fr))` }}
+              className="grid border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors group"
+              style={{ gridTemplateColumns: `80px repeat(${weeks.length}, minmax(0, 1fr))` }}
             >
               {/* Member Name Column */}
-              <div className="py-4 px-2 border-r border-slate-200/60 flex items-center justify-center font-bold text-[15px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors">
+              <div className="py-1 px-1 border-r border-slate-200/60 flex items-center justify-center font-bold text-[13px] text-slate-800 bg-white group-hover:bg-slate-50/50 transition-colors">
                 {member.name}
               </div>
               
@@ -250,17 +249,17 @@ export default function AdminWeeklyCalendar() {
                 return (
                   <div 
                     key={week.dateStr} 
-                    className="p-2 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors"
+                    className="p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors"
                   >
                     {schedule?.image ? (
                       <div 
-                        className="w-16 h-16 rounded-lg overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                        className="w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                         onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
                       >
                         <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-300">-</span>
+                      <span className="text-[10px] text-slate-300">-</span>
                     )}
                   </div>
                 );
