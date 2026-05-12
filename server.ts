@@ -39,6 +39,12 @@ async function initDb() {
     )
   `);
 
+  try {
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_schedules_memberId ON schedules(memberId)');
+  } catch (e) {
+    // Ignore if index already exists
+  }
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS config (
       key TEXT PRIMARY KEY,

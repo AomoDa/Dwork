@@ -64,18 +64,16 @@ export default function Member() {
   };
 
   useEffect(() => {
-    fetch(`/api/member/${path}`)
-      .then(res => {
+    Promise.all([
+      fetch(`/api/member/${path}`).then(res => {
         if (!res.ok) throw new Error('Member not found');
         return res.json();
-      })
-      .then(data => {
-        setMember(data);
-        return fetch(`/api/member/${path}/schedules`);
-      })
-      .then(res => res.json())
-      .then(data => {
-        setSchedules(Array.isArray(data) ? data : []);
+      }),
+      fetch(`/api/member/${path}/schedules`).then(res => res.json())
+    ])
+      .then(([memberData, schedulesData]) => {
+        setMember(memberData);
+        setSchedules(Array.isArray(schedulesData) ? schedulesData : []);
         setLoading(false);
       })
       .catch(err => {
