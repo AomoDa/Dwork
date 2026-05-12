@@ -81,8 +81,8 @@ export default function AdminWeeklyCalendar() {
   });
 
   const weeks = useMemo(() => {
-    return Array.from({ length: 5 }).map((_, i) => {
-      const start = subWeeks(startOfWeek(currentDate, { weekStartsOn: 1 }), 4 - i);
+    return Array.from({ length: 2 }).map((_, i) => {
+      const start = subWeeks(startOfWeek(currentDate, { weekStartsOn: 1 }), 1 - i);
       const end = endOfWeek(start, { weekStartsOn: 1 });
       return {
         start,
@@ -100,13 +100,13 @@ export default function AdminWeeklyCalendar() {
 
   const nextWeek = () => {
     if (canGoNext) {
-      const nextDate = addWeeks(currentDate, 5);
+      const nextDate = addWeeks(currentDate, 2);
       setCurrentDate(format(nextDate, 'yyyy-MM-dd') > format(maxAllowedDate, 'yyyy-MM-dd') ? maxAllowedDate : nextDate);
     }
   };
   const prevWeek = () => {
     if (canGoPrev) {
-      setCurrentDate(subWeeks(currentDate, 5));
+      setCurrentDate(subWeeks(currentDate, 2));
     }
   };
 
