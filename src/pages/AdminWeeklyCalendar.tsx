@@ -308,13 +308,13 @@ export default function AdminWeeklyCalendar() {
                     >
                       {hasScheduleData ? (
                         <div 
-                          className="flex flex-col items-center justify-center cursor-pointer group py-0.5"
+                          className="flex flex-col items-center justify-center cursor-pointer group"
                           onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
                         >
-                          <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm group-hover:bg-green-500 group-hover:text-white transition-all duration-300">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          <div className="w-8 h-8 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-500 group-hover:text-white group-hover:border-green-500 transition-all duration-200 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4" />
                           </div>
-                          <span className="text-[9px] font-bold mt-1 text-green-600 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap scale-90 origin-top">点击查看</span>
+                          <span className="text-[10px] text-green-600/80 font-medium mt-1 tracking-wide group-hover:text-green-600 transition-colors scale-90 origin-top whitespace-nowrap">点击查看</span>
                         </div>
                       ) : (
                         <span className={`text-[10px] ${isMissing ? 'text-yellow-600/50 font-medium' : 'text-slate-300'}`}>-</span>
