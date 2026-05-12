@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, getISOWeek, getISOWeekYear } from 'date-fns';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Download, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -13,6 +13,7 @@ interface Schedule {
   content: string;
   type: string;
   image?: string;
+  hasImage?: number;
 }
 
 interface Member {
@@ -33,6 +34,8 @@ export default function AdminWeeklyCalendar() {
   });
   const [loading, setLoading] = useState(true);
   const [enlargedImage, setEnlargedImage] = useState<{ memberId: string, dateStr: string } | null>(null);
+  const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
+  const [isEnlargedImageLoading, setIsEnlargedImageLoading] = useState(false);
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -117,12 +120,40 @@ export default function AdminWeeklyCalendar() {
       const localDate = new Date(y, m - 1, d);
       const weekStartStr = format(startOfWeek(localDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       const key = `${s.memberId}-${weekStartStr}`;
-      if (s.image || !map.has(key)) {
+      if (s.image || s.hasImage || !map.has(key)) {
         map.set(key, s);
       }
     });
     return map;
   }, [schedules]);
+
+  useEffect(() => {
+    if (enlargedImage) {
+      const schedule = scheduleMap.get(`${enlargedImage.memberId}-${enlargedImage.dateStr}`);
+      if (schedule && (schedule.hasImage || schedule.image)) {
+        if (schedule.image) {
+          setEnlargedImageUrl(schedule.image);
+        } else {
+          setIsEnlargedImageLoading(true);
+          setEnlargedImageUrl(null);
+          fetch(`/api/admin/schedules/${schedule.id}/image?token=${token}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.image) {
+                setEnlargedImageUrl(data.image);
+                schedule.image = data.image; // cache
+              }
+            })
+            .catch(console.error)
+            .finally(() => setIsEnlargedImageLoading(false));
+        }
+      } else {
+        setEnlargedImageUrl(null);
+      }
+    } else {
+      setEnlargedImageUrl(null);
+    }
+  }, [enlargedImage, scheduleMap, token]);
 
   const handleExport = async () => {
     if (!exportWeek) {
@@ -141,18 +172,38 @@ export default function AdminWeeklyCalendar() {
       const zip = new JSZip();
       const folderName = `${format(start, 'yy')}年第${getISOWeek(start)}周${format(start, 'MM.dd')}-${format(end, 'MM.dd')}`;
       const folder = zip.folder(folderName);
-      let hasImages = false;
-
-      members.forEach(member => {
+      
+      const downloadPromises = members.map(async member => {
         const schedule = scheduleMap.get(`${member.id}-${weekStr}`);
-        if (schedule && schedule.image) {
-          const base64Data = schedule.image.split(',')[1];
+        if (schedule && (schedule.hasImage || schedule.image)) {
+          let base64Data = '';
+          if (schedule.image) {
+            base64Data = schedule.image.split(',')[1];
+          } else {
+            try {
+              const res = await fetch(`/api/admin/schedules/${schedule.id}/image?token=${token}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data.image) {
+                  base64Data = data.image.split(',')[1];
+                  schedule.image = data.image; // cache
+                }
+              }
+            } catch (error) {
+              console.error('Failed to fetch image for export:', error);
+            }
+          }
+
           if (base64Data && folder) {
             folder.file(`${member.name}.jpg`, base64Data, { base64: true });
-            hasImages = true;
+            return true;
           }
         }
+        return false;
       });
+
+      const results = await Promise.all(downloadPromises);
+      const hasImages = results.some(Boolean);
 
       if (!hasImages) {
         alert('该周没有可导出的行程图片');
@@ -247,19 +298,23 @@ export default function AdminWeeklyCalendar() {
                 {weeks.map(week => {
                   const schedule = scheduleMap.get(`${member.id}-${week.dateStr}`);
                   const isPastOrCurrentWeek = format(week.start, 'yyyy-MM-dd') <= format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-                  const isMissing = !schedule?.image && isPastOrCurrentWeek;
+                  const hasScheduleData = schedule && (schedule.hasImage || schedule.image);
+                  const isMissing = !hasScheduleData && isPastOrCurrentWeek;
 
                   return (
                     <div 
                       key={week.dateStr} 
                       className={`p-1 border-r border-slate-200/60 last:border-0 flex justify-center items-center transition-colors ${isMissing ? 'bg-yellow-100/80' : ''}`}
                     >
-                      {schedule?.image ? (
+                      {hasScheduleData ? (
                         <div 
-                          className="w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                          className="flex flex-col items-center justify-center cursor-pointer group py-0.5"
                           onClick={() => setEnlargedImage({ memberId: member.id, dateStr: week.dateStr })}
                         >
-                          <img src={schedule.image} className="w-full h-full object-cover" alt="行程打卡" loading="lazy" />
+                          <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm group-hover:bg-green-500 group-hover:text-white transition-all duration-300">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-[9px] font-bold mt-1 text-green-600 opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap scale-90 origin-top">点击查看</span>
                         </div>
                       ) : (
                         <span className={`text-[10px] ${isMissing ? 'text-yellow-600/50 font-medium' : 'text-slate-300'}`}>-</span>
@@ -351,8 +406,13 @@ export default function AdminWeeklyCalendar() {
             )}
 
             <div className="relative max-w-[85vw] max-h-[75vh] w-full h-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
-              {schedule?.image ? (
-                <img src={schedule.image} className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl" alt="放大图片" />
+              {isEnlargedImageLoading ? (
+                <div className="flex flex-col items-center justify-center text-white/70 gap-3">
+                  <Loader2 className="w-10 h-10 animate-spin" />
+                  <span className="text-sm font-medium tracking-wider">正在加载大图...</span>
+                </div>
+              ) : enlargedImageUrl ? (
+                <img src={enlargedImageUrl} className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl" alt="放大图片" />
               ) : (
                 <div className="flex flex-col items-center justify-center text-white/50 bg-white/5 rounded-2xl w-full max-w-md aspect-video border border-white/10 shadow-2xl">
                   <span className="text-2xl font-medium tracking-widest">无图片</span>

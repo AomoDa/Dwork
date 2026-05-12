@@ -147,8 +147,21 @@ async function startServer() {
     if (req.query.token !== token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const result = await db.execute('SELECT * FROM schedules');
+    const result = await db.execute("SELECT id, memberId, date, timeOfDay, content, type, CASE WHEN image IS NOT NULL AND image != '' THEN 1 ELSE 0 END as hasImage FROM schedules");
     res.json(result.rows);
+  });
+
+  app.get('/api/admin/schedules/:id/image', async (req, res) => {
+    const token = await getAdminToken();
+    if (req.query.token !== token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const result = await db.execute({
+      sql: 'SELECT image FROM schedules WHERE id = ?',
+      args: [req.params.id]
+    });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ image: result.rows[0].image });
   });
 
   app.post('/api/admin/members', async (req, res) => {
